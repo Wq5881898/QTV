@@ -84,3 +84,8 @@ See [docs/qtv-json-format.md](docs/qtv-json-format.md) for the current format.
 - The current data source is local-only. NAS and remote sync are not wired in yet.
 
 See [docs/prototype-baseline.md](docs/prototype-baseline.md) for the current validation baseline.
+
+## Development Docs
+
+- [docs/development/README.md](docs/development/README.md)
+  Development-oriented documentation for structure, implemented features, and stream playback debugging
