@@ -1,0 +1,40 @@
+{
+  "channels": {
+    "version": "local-test-1",
+    "items": [
+      {
+        "id": "test-902070",
+        "name": "Test Stream 902070",
+        "category": "Local qtv.json",
+        "sources": [
+          {
+            "url": "http://line.smootvone.vip:80/play/live.php?mac=00:1B:79:51:17:A1&stream=902070&extension=m3u8",
+            "priority": 1
+          }
+        ]
+      },
+      {
+        "id": "test-902071",
+        "name": "Test Stream 902071",
+        "category": "Local qtv.json",
+        "sources": [
+          {
+            "url": "http://line.ciao-ott.net:80/play/live.php?mac=00:1B:79:25:19:1F&stream=902071&extension=m3u8",
+            "priority": 1
+          }
+        ]
+      },
+      {
+        "id": "test-902072",
+        "name": "Test Stream 902072",
+        "category": "Local qtv.json",
+        "sources": [
+          {
+            "url": "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1B:79:1C:70:25&stream=902072&extension=m3u8",
+            "priority": 1
+          }
+        ]
+      }
+    ]
+  }
+}
