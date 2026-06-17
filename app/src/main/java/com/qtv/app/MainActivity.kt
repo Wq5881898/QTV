@@ -107,6 +107,8 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
     val playerFocusRequester = remember { FocusRequester() }
     val selectedChannel = channels[selectedIndex]
     val playerTouchInteraction = remember { MutableInteractionSource() }
+    val overlayTouchInteraction = remember { MutableInteractionSource() }
+    val drawerTouchInteraction = remember { MutableInteractionSource() }
 
     LaunchedEffect(Unit) {
         playerFocusRequester.requestFocus()
@@ -179,79 +181,90 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
         )
 
         if (showChannelList) {
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.32f))
-                    .zIndex(1f),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .width(380.dp)
-                        .fillMaxHeight()
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.96f))
-                        .padding(horizontal = 24.dp, vertical = 24.dp)
-                        .focusGroup(),
-                ) {
-                    Text(
-                        text = "QTV",
-                        style = MaterialTheme.typography.displaySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Channels",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
-                        contentPadding = PaddingValues(bottom = 12.dp),
+                    .zIndex(1f)
+                    .clickable(
+                        interactionSource = overlayTouchInteraction,
+                        indication = null,
                     ) {
-                        itemsIndexed(channels) { index, channel ->
-                            ChannelRow(
-                                channel = channel,
-                                focused = index == focusedIndex,
-                                selected = index == selectedIndex,
-                                focusRequester = focusRequesters[index],
-                                onFocused = { focusedIndex = index },
-                                onSelected = {
-                                    selectedIndex = index
-                                    focusedIndex = index
-                                    showChannelList = false
-                                },
-                            )
+                        showChannelList = false
+                    },
+            ) {
+                Row(modifier = Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier
+                            .width(380.dp)
+                            .fillMaxHeight()
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.96f))
+                            .clickable(
+                                interactionSource = drawerTouchInteraction,
+                                indication = null,
+                            ) {}
+                            .padding(horizontal = 24.dp, vertical = 24.dp)
+                            .focusGroup(),
+                    ) {
+                        Text(
+                            text = "QTV",
+                            style = MaterialTheme.typography.displaySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Channels",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                            contentPadding = PaddingValues(bottom = 12.dp),
+                        ) {
+                            itemsIndexed(channels) { index, channel ->
+                                ChannelRow(
+                                    channel = channel,
+                                    focused = index == focusedIndex,
+                                    selected = index == selectedIndex,
+                                    focusRequester = focusRequesters[index],
+                                    onFocused = { focusedIndex = index },
+                                    onSelected = {
+                                        selectedIndex = index
+                                        focusedIndex = index
+                                        showChannelList = false
+                                    },
+                                )
+                            }
                         }
                     }
-                }
 
-                Column(
-                    modifier = Modifier
-                        .width(320.dp)
-                        .padding(top = 44.dp, start = 24.dp),
-                ) {
-                    Text(
-                        text = selectedChannel.name,
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "Tap a channel to play. Back or tap outside closes the list.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.72f),
+                    Column(
+                        modifier = Modifier
+                            .width(320.dp)
+                            .padding(top = 44.dp, start = 24.dp),
+                    ) {
+                        Text(
+                            text = selectedChannel.name,
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Tap a channel to play. Back or tap outside closes the list.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.72f),
+                        )
+                    }
+
+                    Spacer(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
                     )
                 }
-
-                Spacer(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .clickable { showChannelList = false },
-                )
             }
         }
     }
