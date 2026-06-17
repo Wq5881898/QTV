@@ -1,0 +1,124 @@
+{
+  "channels": {
+    "version": "local-test-1",
+    "items": [
+      {
+        "id": "test-902070",
+        "name": "TNS1",
+        "category": "Local qtv.json",
+        "sources": [
+          {
+            "url": "http://line.smootvone.vip:80/play/live.php?mac=00:1B:79:51:17:A1&stream=902070&extension=m3u8",
+            "priority": 1,
+            "type": "hls",
+            "label": "Primary"
+          }
+        ]
+      },
+      {
+        "id": "test-902071",
+        "name": "TNS2",
+        "category": "Local qtv.json",
+        "sources": [
+          {
+            "url": "http://line.ciao-ott.net:80/play/live.php?mac=00:1B:79:25:19:1F&stream=902071&extension=m3u8",
+            "priority": 1,
+            "type": "hls",
+            "label": "Primary"
+          }
+        ]
+      },
+      {
+        "id": "test-902072",
+        "name": "TNS3",
+        "category": "Local qtv.json",
+        "sources": [
+          {
+            "url": "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1B:79:1C:70:25&stream=902072&extension=m3u8",
+            "priority": 1,
+            "type": "hls",
+            "label": "Primary"
+          }
+        ]
+      },
+      {
+        "id": "test-902073",
+        "name": "CCTV5-1",
+        "category": "Local qtv.json",
+        "sources": [
+          {
+            "url": "https://cdn16.163189.xyz/163189/cctv5",
+            "priority": 1,
+            "type": "hls",
+            "label": "Primary"
+          }
+        ]
+      },
+      {
+        "id": "test-902074",
+        "name": "CCTV5-2",
+        "category": "Local qtv.json",
+        "sources": [
+          {
+            "url": "http://111.43.126.240:9003/hls/5/index.m3u8",
+            "priority": 1,
+            "type": "hls",
+            "label": "Primary"
+          }
+        ]
+      },
+      {
+        "id": "test-902075",
+        "name": "VTV-1",
+        "category": "Local qtv.json",
+        "sources": [
+          {
+            "url": "http://111.43.126.240:9003/hls/5/index.m3u8",
+            "priority": 1,
+            "type": "hls",
+            "label": "Primary"
+          }
+        ]
+      },
+      {
+        "id": "test-902076",
+        "name": "VTV-2",
+        "category": "Local qtv.json",
+        "sources": [
+          {
+            "url": "http://111.43.126.240:9003/hls/5/index.m3u8",
+            "priority": 1,
+            "type": "hls",
+            "label": "Primary"
+          }
+        ]
+      },
+      {
+        "id": "test-902077",
+        "name": "VTV-3",
+        "category": "Local qtv.json",
+        "sources": [
+          {
+            "url": "http://111.43.126.240:9003/hls/5/index.m3u8",
+            "priority": 1,
+            "type": "hls",
+            "label": "Primary"
+          }
+        ]
+      },
+      {
+        "id": "test-902078",
+        "name": "TVRI-SPORT",
+        "category": "Local qtv.json",
+        "sources": [
+          {
+            "url": "http://111.43.126.240:9003/hls/5/index.m3u8",
+            "priority": 1,
+            "type": "hls",
+            "label": "Primary"
+          }
+        ]
+      }
+    ]
+  }
+}
