@@ -69,11 +69,11 @@
       },
       {
         "id": "test-902075",
-        "name": "VTV-1",
+        "name": "VTV-10",
         "category": "Local qtv.json",
         "sources": [
           {
-            "url": "http://111.43.126.240:9003/hls/5/index.m3u8",
+            "url": "https://live.fptplay53.net/live/media/vtv10/live247-hls-avc/vtv10-avc1_5600000=10000-mp4a_131600=20000.m3u8",
             "priority": 1,
             "type": "hls",
             "label": "Primary"
@@ -82,11 +82,11 @@
       },
       {
         "id": "test-902076",
-        "name": "VTV-2",
+        "name": "VTV-6",
         "category": "Local qtv.json",
         "sources": [
           {
-            "url": "http://111.43.126.240:9003/hls/5/index.m3u8",
+            "url": "https://live-a.fptplay53.net/live/media/vtv6/live247-hls-avc/vtv6-avc1_5600000=10000-mp4a_131600=20000.m3u8",
             "priority": 1,
             "type": "hls",
             "label": "Primary"
@@ -95,11 +95,11 @@
       },
       {
         "id": "test-902077",
-        "name": "VTV-3",
+        "name": "VTV-9",
         "category": "Local qtv.json",
         "sources": [
           {
-            "url": "http://111.43.126.240:9003/hls/5/index.m3u8",
+            "url": "https://live.fptplay53.net/live/media/vtv9/live247-hls-avc/vtv9-avc1_5600000=10000-mp4a_131600=20000.m3u8",
             "priority": 1,
             "type": "hls",
             "label": "Primary"
@@ -112,7 +112,7 @@
         "category": "Local qtv.json",
         "sources": [
           {
-            "url": "http://111.43.126.240:9003/hls/5/index.m3u8",
+            "url": "http://103.148.44.38:8000/play/a05u/index.m3u8",
             "priority": 1,
             "type": "hls",
             "label": "Primary"
