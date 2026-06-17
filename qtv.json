@@ -107,6 +107,19 @@
         ]
       },
       {
+        "id": "test-999999",
+        "name": "999",
+        "category": "Local qtv.json",
+        "sources": [
+          {
+            "url": "http://line.ciao-ott.net:80/play/live.php?mac=00:1B:79:25:19:1F&stream=902071&extension=m3u8",
+            "priority": 1,
+            "type": "hls",
+            "label": "Primary"
+          }
+        ]
+      },      
+      {
         "id": "test-902078",
         "name": "TVRI-SPORT",
         "category": "Local qtv.json",
