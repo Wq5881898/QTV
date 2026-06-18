@@ -1,6 +1,6 @@
 package com.qtv.app.config
 
-import android.content.Context
+import org.json.JSONArray
 import org.json.JSONObject
 
 data class QtvSource(
@@ -19,8 +19,7 @@ data class QtvChannel(
     val sources: List<QtvSource>,
 )
 
-fun loadBundledChannels(context: Context): List<QtvChannel> {
-    val rawJson = context.assets.open("qtv.json").bufferedReader().use { it.readText() }
+internal fun parseQtvChannels(rawJson: String, fallbackCategory: String): List<QtvChannel> {
     val root = JSONObject(rawJson)
     val items = root
         .getJSONObject("channels")
@@ -41,7 +40,7 @@ fun loadBundledChannels(context: Context): List<QtvChannel> {
                 QtvChannel(
                     id = item.optString("id", "channel-$index"),
                     name = item.optString("name", "Channel ${index + 1}"),
-                    category = item.optString("category", "Local qtv.json"),
+                    category = item.optString("category", fallbackCategory),
                     status = "Configured",
                     sourceType = parsedSources.first().type,
                     sources = parsedSources,
@@ -51,7 +50,7 @@ fun loadBundledChannels(context: Context): List<QtvChannel> {
     }
 }
 
-private fun parseSources(sources: org.json.JSONArray): List<QtvSource> =
+private fun parseSources(sources: JSONArray): List<QtvSource> =
     (0 until sources.length())
         .map { sources.getJSONObject(it) }
         .mapIndexedNotNull { index, source ->

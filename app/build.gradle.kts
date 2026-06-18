@@ -3,6 +3,9 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+val defaultQtvRemoteConfigUrl = "https://raw.githubusercontent.com/Wq5881898/QTV/main/qtv.json"
+val qtvRemoteConfigUrl = providers.gradleProperty("QTV_REMOTE_CONFIG_URL").orElse(defaultQtvRemoteConfigUrl)
+
 android {
     namespace = "com.qtv.app"
     compileSdk {
@@ -17,6 +20,11 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+        buildConfigField(
+            "String",
+            "QTV_REMOTE_CONFIG_URL",
+            "\"${qtvRemoteConfigUrl.get().replace("\\", "\\\\").replace("\"", "\\\"")}\"",
+        )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -34,6 +42,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

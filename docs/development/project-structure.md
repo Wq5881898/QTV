@@ -59,33 +59,42 @@ QTV/
 - 当前原型的频道配置源
 - 保存频道、分类、流地址、优先级
 
-当前不是远程拉取，也不是 NAS 读取，所有频道都来自这个本地文件。
+当前默认频道仍来自这个本地文件，但已经支持用 external URL 覆盖它。
 
 ### 3. `app/src/main/java/com/qtv/app/config/LocalQtvConfig.kt`
 
 作用：
 
-- 读取 `assets/qtv.json`
-- 解析 JSON
+- 保存 `QtvChannel` / `QtvSource` 数据模型
+- 解析原始 JSON
 - 取出每个频道的主播放源
 - 按 `priority` 排序并选择优先级最高的源
 - 映射成界面可直接消费的 `QtvChannel`
 
-当前逻辑是“能播优先”，并没有做复杂的容错和多源切换。
+### 4. `app/src/main/java/com/qtv/app/config/QtvConfigRepository.kt`
 
-### 4. `app/src/main/java/com/qtv/app/MainActivity.kt`
+作用：
+
+- 抽象配置来源
+- 当前支持 bundled default 和 external URL
+- external URL 后续既可以是普通远程地址，也可以是 NAS 提供的 URL
+- 在 external 配置失败时回落到 bundled default
+- 向 UI 返回当前实际生效的配置来源和 warning
+
+### 5. `app/src/main/java/com/qtv/app/MainActivity.kt`
 
 作用：
 
 - 应用入口
 - 组合式 TV 首页
+- 异步加载频道配置
 - 左侧频道列表
 - 右侧频道详情和播放器区域
 - D-pad 焦点和已选频道状态管理
 
 这部分现在承担了 UI 主流程，没有再拆 ViewModel 或更完整的状态层。
 
-### 5. `app/src/main/java/com/qtv/app/player/QtvPlayerPane.kt`
+### 6. `app/src/main/java/com/qtv/app/player/QtvPlayerPane.kt`
 
 作用：
 
@@ -98,7 +107,7 @@ QTV/
 
 这份代码是这次流媒体调通的关键位置。
 
-### 6. `app/src/main/res/xml/network_security_config.xml`
+### 7. `app/src/main/res/xml/network_security_config.xml`
 
 作用：
 
@@ -167,7 +176,7 @@ QTV/
 
 当原型进入下一阶段，可以按下面方向拆分：
 
-1. `config` 从本地 `assets` 扩展到本地文件、NAS、远程接口
+1. `config` 从本地 `assets` 扩展到 bundled default + external URL 切换
 2. `player` 增加重试、超时、错误分级、源切换
 3. `ui` 引入更清晰的状态管理层
 4. 增加日志与诊断能力，减少纯靠肉眼判断播放是否成功

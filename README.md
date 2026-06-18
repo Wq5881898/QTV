@@ -77,11 +77,28 @@ Each source currently uses:
 
 See [docs/qtv-json-format.md](docs/qtv-json-format.md) for the current format.
 
+## Config Sources
+
+The app now loads channels through a config-source abstraction:
+
+- bundled default `assets/qtv.json`
+- optional external URL
+
+If `QTV_REMOTE_CONFIG_URL` is set as a Gradle property, the app will try that external JSON first.
+This can later be a normal remote link or a NAS-served URL.
+If external loading fails, it falls back to the bundled default config.
+
+Example:
+
+```powershell
+.\gradlew.bat :app:assembleDebug -PQTV_REMOTE_CONFIG_URL=https://example.com/qtv.json
+```
+
 ## Prototype Notes
 
 - This build currently permits cleartext HTTP traffic because the validated stream sources are HTTP.
 - The player forces HLS MIME type for the current live stream format.
-- The current data source is local-only. NAS and remote sync are not wired in yet.
+- The current default data source is bundled local config, with optional external URL override.
 
 See [docs/prototype-baseline.md](docs/prototype-baseline.md) for the current validation baseline.
 

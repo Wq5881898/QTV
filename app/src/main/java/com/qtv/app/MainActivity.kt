@@ -27,14 +27,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -56,9 +61,17 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.qtv.app.config.QtvChannel
-import com.qtv.app.config.loadBundledChannels
+import com.qtv.app.config.QtvConfigCatalog
+import com.qtv.app.config.QtvConfigLocation
+import com.qtv.app.config.QtvConfigPreferences
+import com.qtv.app.config.QtvConfigRepository
 import com.qtv.app.player.QtvPlayerPane
 import com.qtv.app.ui.theme.QTVTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -93,9 +106,68 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun TvHomeScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val channels = remember(context) { loadBundledChannels(context) }
+    val configPreferences = remember(context) { QtvConfigPreferences(context) }
+    val configRepository = remember { QtvConfigRepository() }
+    var preferredConfigLocation by remember {
+        mutableStateOf(configPreferences.resolvePreferredLocation())
+    }
+    var lastUpdatedAtMillis by rememberSaveable {
+        mutableLongStateOf(configPreferences.getLastUpdatedAtMillis() ?: 0L)
+    }
+    var reloadNonce by rememberSaveable { mutableIntStateOf(0) }
+    val catalogUiState by produceState<QtvCatalogUiState>(
+        initialValue = QtvCatalogUiState(isLoading = true),
+        context,
+        configPreferences,
+        configRepository,
+        preferredConfigLocation,
+        reloadNonce,
+    ) {
+        value = try {
+            val catalog = withContext(Dispatchers.IO) {
+                configRepository.loadCatalog(context, preferredConfigLocation)
+            }
+            val updatedAtMillis = System.currentTimeMillis()
+            configPreferences.saveLastUpdatedAtMillis(updatedAtMillis)
+            lastUpdatedAtMillis = updatedAtMillis
+            QtvCatalogUiState(catalog = catalog)
+        } catch (error: Throwable) {
+            QtvCatalogUiState(
+                errorMessage = error.message ?: "Unknown config load error",
+            )
+        }
+    }
+
+    if (catalogUiState.isLoading) {
+        LoadingConfigState(modifier = modifier)
+        return
+    }
+
+    val configErrorMessage = catalogUiState.errorMessage
+    if (configErrorMessage != null) {
+        ConfigErrorState(
+            message = configErrorMessage,
+            modifier = modifier,
+        )
+        return
+    }
+
+    val catalog = catalogUiState.catalog
+    if (catalog == null) {
+        ConfigErrorState(
+            message = "Config catalog was not available",
+            modifier = modifier,
+        )
+        return
+    }
+
+    val channels = catalog.channels
     if (channels.isEmpty()) {
-        EmptyConfigState(modifier = modifier)
+        EmptyConfigState(
+            sourceSummary = catalog.sourceSummary,
+            warningMessage = catalog.warningMessage,
+            modifier = modifier,
+        )
         return
     }
     val focusRequesters = remember(channels.size) {
@@ -104,25 +176,52 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
     var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
     var focusedIndex by rememberSaveable { mutableIntStateOf(0) }
     var showChannelList by rememberSaveable { mutableStateOf(false) }
+    var showSettingsPanel by rememberSaveable { mutableStateOf(false) }
+    var settingsExternalUrlDraft by rememberSaveable { mutableStateOf("") }
     val playerFocusRequester = remember { FocusRequester() }
+    val settingsButtonFocusRequester = remember { FocusRequester() }
+    val settingsUrlFocusRequester = remember { FocusRequester() }
     val selectedChannel = channels[selectedIndex]
     val playerTouchInteraction = remember { MutableInteractionSource() }
     val overlayTouchInteraction = remember { MutableInteractionSource() }
     val drawerTouchInteraction = remember { MutableInteractionSource() }
+    var drawerFocusArea by rememberSaveable { mutableStateOf(DrawerFocusArea.ChannelList) }
 
     LaunchedEffect(Unit) {
         playerFocusRequester.requestFocus()
     }
 
-    BackHandler(enabled = showChannelList) {
-        showChannelList = false
+    LaunchedEffect(channels.size) {
+        val lastIndex = channels.lastIndex
+        if (selectedIndex > lastIndex) {
+            selectedIndex = lastIndex
+        }
+        if (focusedIndex > lastIndex) {
+            focusedIndex = lastIndex
+        }
     }
 
-    LaunchedEffect(showChannelList, focusedIndex) {
-        if (showChannelList) {
-            focusRequesters.getOrNull(focusedIndex)?.requestFocus()
+    BackHandler(enabled = showChannelList) {
+        if (showSettingsPanel) {
+            showSettingsPanel = false
+            settingsButtonFocusRequester.requestFocus()
         } else {
+            showChannelList = false
+        }
+    }
+
+    LaunchedEffect(showChannelList, showSettingsPanel, focusedIndex) {
+        if (showChannelList && !showSettingsPanel) {
+            focusRequesters.getOrNull(focusedIndex)?.requestFocus()
+        } else if (!showChannelList) {
             playerFocusRequester.requestFocus()
+        }
+    }
+
+    LaunchedEffect(showSettingsPanel, preferredConfigLocation) {
+        if (showSettingsPanel) {
+            settingsExternalUrlDraft = configPreferences.getConfiguredExternalUrl()
+            settingsUrlFocusRequester.requestFocus()
         }
     }
 
@@ -150,10 +249,33 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                         }
                     }
 
+                    showChannelList &&
+                        !showSettingsPanel &&
+                        event.key == Key.DirectionRight &&
+                        drawerFocusArea == DrawerFocusArea.ChannelList -> {
+                        settingsButtonFocusRequester.requestFocus()
+                        drawerFocusArea = DrawerFocusArea.SettingsButton
+                        true
+                    }
+
+                    showChannelList &&
+                        !showSettingsPanel &&
+                        event.key == Key.DirectionLeft &&
+                        drawerFocusArea == DrawerFocusArea.SettingsButton -> {
+                        focusRequesters.getOrNull(focusedIndex)?.requestFocus()
+                        drawerFocusArea = DrawerFocusArea.ChannelList
+                        true
+                    }
+
                     event.key == Key.Back ||
                         event.nativeKeyEvent.keyCode == AndroidKeyEvent.KEYCODE_BACK -> {
                         if (showChannelList) {
-                            showChannelList = false
+                            if (showSettingsPanel) {
+                                showSettingsPanel = false
+                                settingsButtonFocusRequester.requestFocus()
+                            } else {
+                                showChannelList = false
+                            }
                             true
                         } else {
                             false
@@ -206,18 +328,46 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                             .padding(horizontal = 24.dp, vertical = 24.dp)
                             .focusGroup(),
                     ) {
-                        Text(
-                            text = "QTV",
-                            style = MaterialTheme.typography.displaySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Channels",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Column {
+                                Text(
+                                    text = "QTV",
+                                    style = MaterialTheme.typography.displaySmall,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Channels",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            OutlinedButton(
+                                onClick = { showSettingsPanel = true },
+                                enabled = !showSettingsPanel,
+                                modifier = Modifier
+                                    .focusRequester(settingsButtonFocusRequester)
+                                    .onFocusChanged { state ->
+                                        if (state.isFocused) {
+                                            drawerFocusArea = DrawerFocusArea.SettingsButton
+                                        }
+                                    },
+                            ) {
+                                Text(text = "Settings")
+                            }
+                        }
+                        if (catalog.warningMessage != null) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = catalog.warningMessage,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.tertiary,
+                            )
+                        }
                         Spacer(modifier = Modifier.height(16.dp))
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -228,8 +378,12 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                                     channel = channel,
                                     focused = index == focusedIndex,
                                     selected = index == selectedIndex,
+                                    enabled = !showSettingsPanel,
                                     focusRequester = focusRequesters[index],
-                                    onFocused = { focusedIndex = index },
+                                    onFocused = {
+                                        focusedIndex = index
+                                        drawerFocusArea = DrawerFocusArea.ChannelList
+                                    },
                                     onSelected = {
                                         selectedIndex = index
                                         focusedIndex = index
@@ -242,21 +396,55 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
 
                     Column(
                         modifier = Modifier
-                            .width(320.dp)
-                            .padding(top = 44.dp, start = 24.dp),
+                            .width(420.dp)
+                            .padding(top = 24.dp, start = 24.dp, end = 24.dp)
+                            .then(
+                                if (showSettingsPanel) {
+                                    Modifier.clickable(
+                                        interactionSource = drawerTouchInteraction,
+                                        indication = null,
+                                    ) {}
+                                } else {
+                                    Modifier
+                                },
+                            ),
                     ) {
-                        Text(
-                            text = selectedChannel.name,
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = Color.White,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Tap a channel to play. Back or tap outside closes the list.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.72f),
-                        )
+                        if (showSettingsPanel) {
+                            SettingsPanel(
+                                currentSourceSummary = catalog.sourceSummary,
+                                warningMessage = catalog.warningMessage,
+                                externalUrl = settingsExternalUrlDraft,
+                                lastUpdatedAtMillis = lastUpdatedAtMillis.takeIf { it > 0L },
+                                urlFocusRequester = settingsUrlFocusRequester,
+                                onExternalUrlChange = { settingsExternalUrlDraft = it },
+                                onSaveExternalUrl = {
+                                    configPreferences.saveExternalUrl(settingsExternalUrlDraft)
+                                    preferredConfigLocation = configPreferences.resolvePreferredLocation()
+                                    reloadNonce += 1
+                                    showSettingsPanel = false
+                                    showChannelList = false
+                                },
+                                onReloadChannels = {
+                                    preferredConfigLocation = configPreferences.resolvePreferredLocation()
+                                    reloadNonce += 1
+                                    showSettingsPanel = false
+                                    showChannelList = false
+                                },
+                            )
+                        } else {
+                            Text(
+                                text = selectedChannel.name,
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "Tap a channel to play. Back or tap outside closes the list.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(alpha = 0.72f),
+                            )
+                        }
                     }
 
                     Spacer(
@@ -271,10 +459,85 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
 }
 
 @Composable
+private fun SettingsPanel(
+    currentSourceSummary: String,
+    warningMessage: String?,
+    externalUrl: String,
+    lastUpdatedAtMillis: Long?,
+    urlFocusRequester: FocusRequester,
+    onExternalUrlChange: (String) -> Unit,
+    onSaveExternalUrl: () -> Unit,
+    onReloadChannels: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.focusGroup(),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Text(
+            text = "Settings",
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color.White,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = "Current source: $currentSourceSummary",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White.copy(alpha = 0.8f),
+        )
+        if (lastUpdatedAtMillis != null) {
+            Text(
+                text = "Last updated: ${formatLastUpdatedAt(lastUpdatedAtMillis)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.72f),
+            )
+        }
+        if (warningMessage != null) {
+            Text(
+                text = warningMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.tertiary,
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            OutlinedTextField(
+                value = externalUrl,
+                onValueChange = onExternalUrlChange,
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(urlFocusRequester),
+                label = { Text("External qtv.json URL") },
+                singleLine = true,
+            )
+            Button(
+                onClick = onSaveExternalUrl,
+                modifier = Modifier.padding(top = 8.dp),
+            ) {
+                Text("Save")
+            }
+        }
+        Button(
+            onClick = onReloadChannels,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Update channel list")
+        }
+        Text(
+            text = "Update app: reserved for a later step.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White.copy(alpha = 0.72f),
+        )
+    }
+}
+
+@Composable
 private fun ChannelRow(
     channel: QtvChannel,
     focused: Boolean,
     selected: Boolean,
+    enabled: Boolean,
     focusRequester: FocusRequester,
     onFocused: () -> Unit,
     onSelected: () -> Unit,
@@ -307,8 +570,8 @@ private fun ChannelRow(
             .clip(RoundedCornerShape(20.dp))
             .background(backgroundColor)
             .border(width = 2.dp, color = borderColor, shape = RoundedCornerShape(20.dp))
-            .clickable(onClick = onSelected)
-            .focusable()
+            .clickable(enabled = enabled, onClick = onSelected)
+            .focusable(enabled = enabled)
             .padding(horizontal = 18.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -336,7 +599,7 @@ private fun ChannelRow(
 }
 
 @Composable
-private fun EmptyConfigState(modifier: Modifier = Modifier) {
+private fun LoadingConfigState(modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier
             .fillMaxSize()
@@ -351,13 +614,96 @@ private fun EmptyConfigState(modifier: Modifier = Modifier) {
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "No channels found in bundled qtv.json",
+                text = "Loading channel config...",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
     }
 }
+
+@Composable
+private fun EmptyConfigState(
+    sourceSummary: String,
+    warningMessage: String?,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+    ) {
+        Column(modifier = Modifier.padding(40.dp)) {
+            Text(
+                text = "QTV",
+                style = MaterialTheme.typography.displaySmall,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "No channels found in $sourceSummary",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            if (warningMessage != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = warningMessage,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConfigErrorState(
+    message: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+    ) {
+        Column(modifier = Modifier.padding(40.dp)) {
+            Text(
+                text = "QTV",
+                style = MaterialTheme.typography.displaySmall,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "Failed to load channel config",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+}
+
+private data class QtvCatalogUiState(
+    val isLoading: Boolean = false,
+    val catalog: QtvConfigCatalog? = null,
+    val errorMessage: String? = null,
+)
+
+private enum class DrawerFocusArea {
+    ChannelList,
+    SettingsButton,
+}
+
+private fun formatLastUpdatedAt(timestampMillis: Long): String =
+    SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(timestampMillis))
 
 @Preview(widthDp = 1280, heightDp = 720)
 @Composable

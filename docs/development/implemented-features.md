@@ -47,7 +47,9 @@
 
 已实现：
 
-- 从 `app/src/main/assets/qtv.json` 读取频道配置
+- 配置源已抽象成 repository + source provider 结构
+- 默认从 `app/src/main/assets/qtv.json` 读取频道配置
+- 已接入统一的 external URL 配置源
 - 解析 `channels.items`
 - 支持频道 `sources`
 - 按 `priority` 选择主源
@@ -59,11 +61,15 @@
 - `status` 当前固定显示为 `Configured`
 - `type` 当前用于推断播放器 MIME type
 - `label` 当前保留在数据层，供后续诊断或扩展使用
+- 如果配置了 external URL，应用会优先尝试 external 配置
+- external URL 后续既可以是普通远程地址，也可以是 NAS 暴露出来的 URL
+- 如果 external 配置失败，会自动回落到 bundled default，并保留 warning
 
 相关文件：
 
 - `app/src/main/assets/qtv.json`
 - `app/src/main/java/com/qtv/app/config/LocalQtvConfig.kt`
+- `app/src/main/java/com/qtv/app/config/QtvConfigRepository.kt`
 
 ## 四、流媒体播放
 
