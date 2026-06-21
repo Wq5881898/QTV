@@ -16,7 +16,7 @@
         ]
       },      
       {
-        "id": "test-902070",
+        "id": "TNS1",
         "name": "TNS1",
         "category": "Local qtv.json",
         "sources": [
@@ -29,7 +29,7 @@
         ]
       },
       {
-        "id": "test-902071",
+        "id": "TNS2",
         "name": "TNS2",
         "category": "Local qtv.json",
         "sources": [
@@ -42,7 +42,7 @@
         ]
       },
       {
-        "id": "test-902072",
+        "id": "TNS3",
         "name": "TNS3",
         "category": "Local qtv.json",
         "sources": [
@@ -55,7 +55,20 @@
         ]
       },
       {
-        "id": "test-902073",
+        "id": "TNS4",
+        "name": "TNS4",
+        "category": "Local qtv.json",
+        "sources": [
+          {
+            "url": "http://185.243.7.171:80/play/live.php?mac=00:1B:79:41:2C:DF&stream=2077046&extension=m3u8",
+            "priority": 1,
+            "type": "hls",
+            "label": "Primary"
+          }
+        ]
+      },
+      {
+        "id": "CCTV5-1",
         "name": "CCTV5-1",
         "category": "Local qtv.json",
         "sources": [
@@ -68,7 +81,7 @@
         ]
       },
       {
-        "id": "test-902074",
+        "id": "CCTV5-2",
         "name": "CCTV5-2",
         "category": "Local qtv.json",
         "sources": [
@@ -80,6 +93,32 @@
           }
         ]
       },
+      {
+        "id": "CCTV5-3",
+        "name": "CCTV5-3",
+        "category": "Local qtv.json",
+        "sources": [
+          {
+            "url": "http://43.152.31.17:843/hlslive-tx-cdn.ysp.cctv.cn/ysp/2024078401_dlna.m3u8",
+            "priority": 1,
+            "type": "hls",
+            "label": "Primary"
+          }
+        ]
+      }, 
+      {
+        "id": "CCTV5-4",
+        "name": "CCTV5-4",
+        "category": "Local qtv.json",
+        "sources": [
+          {
+            "url": "http://69.30.245.50/live/cctv5.m3u8",
+            "priority": 1,
+            "type": "hls",
+            "label": "Primary"
+          }
+        ]
+      },       
       {
         "id": "test-902075",
         "name": "VTV-10",
