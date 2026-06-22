@@ -203,8 +203,8 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
     val overlayTouchInteraction = remember { MutableInteractionSource() }
     val drawerTouchInteraction = remember { MutableInteractionSource() }
     var drawerFocusArea by rememberSaveable { mutableStateOf(DrawerFocusArea.ChannelList) }
-    var updateUiState by rememberSaveable { mutableStateOf(QtvUpdateUiState()) }
-    var pendingStartupUpdatePrompt by rememberSaveable { mutableStateOf<QtvUpdateUiState?>(null) }
+    var updateUiState by remember { mutableStateOf(QtvUpdateUiState()) }
+    var pendingStartupUpdatePrompt by remember { mutableStateOf<QtvUpdateUiState?>(null) }
 
     LaunchedEffect(Unit) {
         playerFocusRequester.requestFocus()
