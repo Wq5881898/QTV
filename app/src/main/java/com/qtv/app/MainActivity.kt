@@ -531,13 +531,6 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                                         onStateChange = { updateUiState = it },
                                     )
                                 },
-                                onOpenUpdate = {
-                                    val targetUrl =
-                                        updateUiState.downloadUrl
-                                            ?: updateUiState.releasePageUrl
-                                            ?: settingsUpdateUrlDraft
-                                    openExternalUrl(context, targetUrl)
-                                },
                             )
                         } else {
                             Text(
@@ -624,7 +617,6 @@ private fun SettingsPanel(
     onSaveUpdateUrl: () -> Unit,
     onReloadChannels: () -> Unit,
     onCheckUpdate: () -> Unit,
-    onOpenUpdate: () -> Unit,
 ) {
     Column(
         modifier = Modifier.focusGroup(),
@@ -723,37 +715,25 @@ private fun SettingsPanel(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Button(
-                onClick = onCheckUpdate,
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
-            ) {
-                Text(
-                    text = if (updateUiState.isChecking) "Updating..." else "Update app",
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1,
-                )
-            }
-            OutlinedButton(
-                onClick = onOpenUpdate,
-                enabled = updateUiState.downloadUrl != null || updateUiState.releasePageUrl != null || updateUrl.isNotBlank(),
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
-            ) {
-                Text(
-                    text = "Open update",
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1,
-                )
-            }
             OutlinedButton(
                 onClick = onReloadChannels,
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                modifier = Modifier.weight(1.15f),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
             ) {
                 Text(
                     text = "Update source",
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 1,
+                )
+            }
+            Button(
+                onClick = onCheckUpdate,
+                modifier = Modifier.weight(1.15f),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    text = if (updateUiState.isChecking) "Updating..." else "Update app",
+                    style = MaterialTheme.typography.labelMedium,
                     maxLines = 1,
                 )
             }
