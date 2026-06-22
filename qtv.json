@@ -68,6 +68,19 @@
         ]
       },
       {
+        "id": "migu1",
+        "name": "migu1",
+        "category": "Local qtv.json",
+        "sources": [
+          {
+            "url": "https://live.wxinxi.com/live/84600906_46n5rq10l0bmsj8e2aovavl914psvggx.m3u8",
+            "priority": 1,
+            "type": "hls",
+            "label": "Primary"
+          }
+        ]
+      },
+      {
         "id": "CCTV5-1",
         "name": "CCTV5-1",
         "category": "Local qtv.json",
