@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -120,6 +121,9 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
     }
     var lastUpdatedAtMillis by rememberSaveable {
         mutableLongStateOf(configPreferences.getLastUpdatedAtMillis() ?: 0L)
+    }
+    var lastAppUpdateCheckAtMillis by rememberSaveable {
+        mutableLongStateOf(configPreferences.getLastAppUpdateCheckAtMillis() ?: 0L)
     }
     var reloadNonce by rememberSaveable { mutableIntStateOf(0) }
     val catalogUiState by produceState<QtvCatalogUiState>(
@@ -487,11 +491,11 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                     ) {
                         if (showSettingsPanel) {
                             SettingsPanel(
-                                currentSourceSummary = catalog.sourceSummary,
                                 warningMessage = catalog.warningMessage,
                                 externalUrl = settingsExternalUrlDraft,
                                 updateUrl = settingsUpdateUrlDraft,
                                 lastUpdatedAtMillis = lastUpdatedAtMillis.takeIf { it > 0L },
+                                lastAppUpdateCheckAtMillis = lastAppUpdateCheckAtMillis.takeIf { it > 0L },
                                 urlFocusRequester = settingsUrlFocusRequester,
                                 updateUrlFocusRequester = updateUrlFocusRequester,
                                 updateUiState = updateUiState,
@@ -499,11 +503,15 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                                 onUpdateUrlChange = { settingsUpdateUrlDraft = it },
                                 onSaveExternalUrl = {
                                     configPreferences.saveExternalUrl(settingsExternalUrlDraft)
-                                    configPreferences.saveUpdateUrl(settingsUpdateUrlDraft)
                                     preferredConfigLocation = configPreferences.resolvePreferredLocation()
                                     reloadNonce += 1
                                     showSettingsPanel = false
                                     showChannelList = false
+                                },
+                                onSaveUpdateUrl = {
+                                    configPreferences.saveUpdateUrl(settingsUpdateUrlDraft)
+                                    lastAppUpdateCheckAtMillis =
+                                        configPreferences.getLastAppUpdateCheckAtMillis() ?: lastAppUpdateCheckAtMillis
                                 },
                                 onReloadChannels = {
                                     preferredConfigLocation = configPreferences.resolvePreferredLocation()
@@ -513,6 +521,9 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                                 },
                                 onCheckUpdate = {
                                     configPreferences.saveUpdateUrl(settingsUpdateUrlDraft)
+                                    val checkedAt = System.currentTimeMillis()
+                                    configPreferences.saveLastAppUpdateCheckAtMillis(checkedAt)
+                                    lastAppUpdateCheckAtMillis = checkedAt
                                     checkForUpdate(
                                         scope = coroutineScope,
                                         updateRepository = updateRepository,
@@ -599,24 +610,25 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
 
 @Composable
 private fun SettingsPanel(
-    currentSourceSummary: String,
     warningMessage: String?,
     externalUrl: String,
     updateUrl: String,
     lastUpdatedAtMillis: Long?,
+    lastAppUpdateCheckAtMillis: Long?,
     urlFocusRequester: FocusRequester,
     updateUrlFocusRequester: FocusRequester,
     updateUiState: QtvUpdateUiState,
     onExternalUrlChange: (String) -> Unit,
     onUpdateUrlChange: (String) -> Unit,
     onSaveExternalUrl: () -> Unit,
+    onSaveUpdateUrl: () -> Unit,
     onReloadChannels: () -> Unit,
     onCheckUpdate: () -> Unit,
     onOpenUpdate: () -> Unit,
 ) {
     Column(
         modifier = Modifier.focusGroup(),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text(
             text = "Settings",
@@ -624,17 +636,22 @@ private fun SettingsPanel(
             color = Color.White,
             fontWeight = FontWeight.SemiBold,
         )
-        Text(
-            text = "Current source: $currentSourceSummary",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.White.copy(alpha = 0.8f),
-        )
         if (lastUpdatedAtMillis != null) {
-            Text(
-                text = "Last updated: ${formatLastUpdatedAt(lastUpdatedAtMillis)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.72f),
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = "Source updates",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = "Last updated: ${formatLastUpdatedAt(lastUpdatedAtMillis)}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         if (warningMessage != null) {
             Text(
@@ -652,6 +669,7 @@ private fun SettingsPanel(
                 onValueChange = onExternalUrlChange,
                 modifier = Modifier
                     .weight(1f)
+                    .heightIn(min = 52.dp)
                     .focusRequester(urlFocusRequester),
                 label = { Text("External qtv.json URL") },
                 singleLine = true,
@@ -663,37 +681,81 @@ private fun SettingsPanel(
                 Text("Save")
             }
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "App updates",
-            style = MaterialTheme.typography.titleMedium,
-            color = Color.White,
-            fontWeight = FontWeight.SemiBold,
-        )
-        OutlinedTextField(
-            value = updateUrl,
-            onValueChange = onUpdateUrlChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(updateUrlFocusRequester),
-            label = { Text("Update source URL") },
-            supportingText = { Text("Default uses GitHub latest release API. Direct APK URL is also supported.") },
-            singleLine = true,
-        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "App updates",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+            )
+            if (lastAppUpdateCheckAtMillis != null) {
+                Text(
+                    text = "Last updated: ${formatLastUpdatedAt(lastAppUpdateCheckAtMillis)}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            OutlinedTextField(
+                value = updateUrl,
+                onValueChange = onUpdateUrlChange,
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 52.dp)
+                    .focusRequester(updateUrlFocusRequester),
+                label = { Text("Update app URL") },
+                singleLine = true,
+            )
+            Button(
+                onClick = onSaveUpdateUrl,
+                modifier = Modifier.padding(top = 8.dp),
+            ) {
+                Text("Save")
+            }
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Button(
                 onClick = onCheckUpdate,
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
             ) {
-                Text(if (updateUiState.isChecking) "Checking..." else "Check update")
+                Text(
+                    text = if (updateUiState.isChecking) "Updating..." else "Update app",
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                )
             }
             OutlinedButton(
                 onClick = onOpenUpdate,
                 enabled = updateUiState.downloadUrl != null || updateUiState.releasePageUrl != null || updateUrl.isNotBlank(),
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
             ) {
-                Text("Open update")
+                Text(
+                    text = "Open update",
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                )
+            }
+            OutlinedButton(
+                onClick = onReloadChannels,
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    text = "Update source",
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                )
             }
         }
         if (updateUiState.statusMessage != null) {
@@ -709,12 +771,6 @@ private fun SettingsPanel(
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(alpha = 0.72f),
             )
-        }
-        Button(
-            onClick = onReloadChannels,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("Update channel list")
         }
     }
 }
@@ -953,6 +1009,7 @@ private suspend fun fetchStartupUpdateState(
     configPreferences: QtvConfigPreferences,
 ): QtvUpdateUiState? {
     val updateUrl = configPreferences.getConfiguredUpdateUrl()
+    configPreferences.saveLastAppUpdateCheckAtMillis(System.currentTimeMillis())
     return runCatching {
         withContext(Dispatchers.IO) {
             updateRepository.checkForUpdate(updateUrl)

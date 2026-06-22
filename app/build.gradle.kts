@@ -20,8 +20,8 @@ android {
         applicationId = "com.qtv.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.1.4"
+        versionCode = 5
+        versionName = "0.1.5"
         buildConfigField(
             "String",
             "QTV_REMOTE_CONFIG_URL",

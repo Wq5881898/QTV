@@ -7,6 +7,7 @@ private const val PREFS_NAME = "qtv_config_prefs"
 private const val KEY_EXTERNAL_URL = "external_url"
 private const val KEY_UPDATE_URL = "update_url"
 private const val KEY_LAST_UPDATED_AT = "last_updated_at"
+private const val KEY_LAST_APP_UPDATE_CHECK_AT = "last_app_update_check_at"
 private const val KEY_CACHED_REMOTE_JSON = "cached_remote_json"
 private const val KEY_CACHED_REMOTE_URL = "cached_remote_url"
 private const val KEY_LAST_REMOTE_SYNC_AT = "last_remote_sync_at"
@@ -69,6 +70,14 @@ class QtvConfigPreferences(context: Context) {
 
     fun saveLastUpdatedAtMillis(timestampMillis: Long) {
         prefs.edit().putLong(KEY_LAST_UPDATED_AT, timestampMillis).apply()
+    }
+
+    fun getLastAppUpdateCheckAtMillis(): Long? =
+        prefs.getLong(KEY_LAST_APP_UPDATE_CHECK_AT, 0L)
+            .takeIf { it > 0L }
+
+    fun saveLastAppUpdateCheckAtMillis(timestampMillis: Long) {
+        prefs.edit().putLong(KEY_LAST_APP_UPDATE_CHECK_AT, timestampMillis).apply()
     }
 
     fun getCachedRemoteJson(expectedUrl: String): String? {
