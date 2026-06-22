@@ -70,6 +70,25 @@ class QtvConfigRepository(
         ExternalUrlQtvConfigSource(),
     ),
 ) {
+    suspend fun loadCatalogFromRawJson(
+        rawJson: String,
+        location: QtvConfigLocation,
+    ): QtvConfigCatalog =
+        QtvConfigCatalog(
+            channels = parseQtvChannels(rawJson, fallbackCategory = location.defaultCategory()),
+            activeLocation = location,
+            sourceSummary = location.sourceSummary(),
+        )
+
+    suspend fun fetchRawJson(
+        context: Context,
+        location: QtvConfigLocation,
+    ): String {
+        val source = sources.firstOrNull { it.canHandle(location) }
+            ?: throw IllegalArgumentException("No config source registered for $location")
+        return source.loadRawJson(context, location)
+    }
+
     suspend fun loadCatalog(
         context: Context,
         preferredLocation: QtvConfigLocation,
@@ -94,14 +113,8 @@ class QtvConfigRepository(
         context: Context,
         location: QtvConfigLocation,
     ): QtvConfigCatalog {
-        val source = sources.firstOrNull { it.canHandle(location) }
-            ?: throw IllegalArgumentException("No config source registered for $location")
-        val rawJson = source.loadRawJson(context, location)
-        return QtvConfigCatalog(
-            channels = parseQtvChannels(rawJson, fallbackCategory = location.defaultCategory()),
-            activeLocation = location,
-            sourceSummary = location.sourceSummary(),
-        )
+        val rawJson = fetchRawJson(context, location)
+        return loadCatalogFromRawJson(rawJson, location)
     }
 }
 

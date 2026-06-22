@@ -1,5 +1,7 @@
 package com.qtv.app
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.activity.compose.BackHandler
@@ -27,6 +29,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -41,6 +44,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -67,7 +71,10 @@ import com.qtv.app.config.QtvConfigPreferences
 import com.qtv.app.config.QtvConfigRepository
 import com.qtv.app.player.QtvPlayerPane
 import com.qtv.app.ui.theme.QTVTheme
+import com.qtv.app.updater.QtvUpdateRepository
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -125,7 +132,12 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
     ) {
         value = try {
             val catalog = withContext(Dispatchers.IO) {
-                configRepository.loadCatalog(context, preferredConfigLocation)
+                loadInitialCatalog(
+                    context = context,
+                    configRepository = configRepository,
+                    configPreferences = configPreferences,
+                    preferredLocation = preferredConfigLocation,
+                )
             }
             val updatedAtMillis = System.currentTimeMillis()
             configPreferences.saveLastUpdatedAtMillis(updatedAtMillis)
@@ -175,30 +187,42 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
     }
     var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
     var focusedIndex by rememberSaveable { mutableIntStateOf(0) }
+    var selectedChannelId by rememberSaveable { mutableStateOf<String?>(null) }
     var showChannelList by rememberSaveable { mutableStateOf(false) }
     var showSettingsPanel by rememberSaveable { mutableStateOf(false) }
     var settingsExternalUrlDraft by rememberSaveable { mutableStateOf("") }
+    var settingsUpdateUrlDraft by rememberSaveable { mutableStateOf("") }
     val playerFocusRequester = remember { FocusRequester() }
     val settingsButtonFocusRequester = remember { FocusRequester() }
     val settingsUrlFocusRequester = remember { FocusRequester() }
+    val updateUrlFocusRequester = remember { FocusRequester() }
+    val coroutineScope = rememberCoroutineScope()
+    val updateRepository = remember { QtvUpdateRepository() }
     val selectedChannel = channels[selectedIndex]
     val playerTouchInteraction = remember { MutableInteractionSource() }
     val overlayTouchInteraction = remember { MutableInteractionSource() }
     val drawerTouchInteraction = remember { MutableInteractionSource() }
     var drawerFocusArea by rememberSaveable { mutableStateOf(DrawerFocusArea.ChannelList) }
+    var updateUiState by rememberSaveable { mutableStateOf(QtvUpdateUiState()) }
+    var pendingStartupUpdatePrompt by rememberSaveable { mutableStateOf<QtvUpdateUiState?>(null) }
 
     LaunchedEffect(Unit) {
         playerFocusRequester.requestFocus()
     }
 
     LaunchedEffect(channels.size) {
-        val lastIndex = channels.lastIndex
-        if (selectedIndex > lastIndex) {
-            selectedIndex = lastIndex
-        }
-        if (focusedIndex > lastIndex) {
-            focusedIndex = lastIndex
-        }
+        val resolvedSelectedIndex =
+            selectedChannelId
+                ?.let { currentId -> channels.indexOfFirst { it.id == currentId } }
+                ?.takeIf { it >= 0 }
+                ?: selectedIndex.coerceIn(0, channels.lastIndex)
+        selectedIndex = resolvedSelectedIndex
+        focusedIndex = focusedIndex.coerceIn(0, channels.lastIndex)
+        selectedChannelId = channels[resolvedSelectedIndex].id
+    }
+
+    LaunchedEffect(selectedChannel.id) {
+        selectedChannelId = selectedChannel.id
     }
 
     BackHandler(enabled = showChannelList) {
@@ -221,7 +245,48 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
     LaunchedEffect(showSettingsPanel, preferredConfigLocation) {
         if (showSettingsPanel) {
             settingsExternalUrlDraft = configPreferences.getConfiguredExternalUrl()
+            settingsUpdateUrlDraft = configPreferences.getConfiguredUpdateUrl()
+            updateUiState = QtvUpdateUiState()
             settingsUrlFocusRequester.requestFocus()
+        }
+    }
+
+    LaunchedEffect(preferredConfigLocation) {
+        val remoteLocation = preferredConfigLocation as? QtvConfigLocation.ExternalUrl ?: run {
+            pendingStartupUpdatePrompt = null
+            return@LaunchedEffect
+        }
+
+        val syncResult =
+            withContext(Dispatchers.IO) {
+                syncRemoteCatalogIfNeeded(
+                    context = context,
+                    configRepository = configRepository,
+                    configPreferences = configPreferences,
+                    remoteLocation = remoteLocation,
+                )
+            }
+
+        if (syncResult.catalogChanged) {
+            reloadNonce += 1
+            return@LaunchedEffect
+        }
+
+        val startupUpdateState = fetchStartupUpdateState(updateRepository, configPreferences)
+        pendingStartupUpdatePrompt = startupUpdateState
+        if (startupUpdateState != null) {
+            updateUiState = startupUpdateState
+        }
+    }
+
+    LaunchedEffect(reloadNonce) {
+        if (reloadNonce == 0) {
+            return@LaunchedEffect
+        }
+        val startupUpdateState = fetchStartupUpdateState(updateRepository, configPreferences)
+        pendingStartupUpdatePrompt = startupUpdateState
+        if (startupUpdateState != null) {
+            updateUiState = startupUpdateState
         }
     }
 
@@ -333,12 +398,22 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Column {
-                                Text(
-                                    text = "QTV",
-                                    style = MaterialTheme.typography.displaySmall,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = FontWeight.Bold,
-                                )
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                ) {
+                                    Text(
+                                        text = "QTV",
+                                        style = MaterialTheme.typography.displaySmall,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    Text(
+                                        text = "v${BuildConfig.VERSION_NAME}",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(top = 12.dp),
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = "Channels",
@@ -387,6 +462,7 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                                     onSelected = {
                                         selectedIndex = index
                                         focusedIndex = index
+                                        selectedChannelId = channel.id
                                         showChannelList = false
                                     },
                                 )
@@ -414,11 +490,16 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                                 currentSourceSummary = catalog.sourceSummary,
                                 warningMessage = catalog.warningMessage,
                                 externalUrl = settingsExternalUrlDraft,
+                                updateUrl = settingsUpdateUrlDraft,
                                 lastUpdatedAtMillis = lastUpdatedAtMillis.takeIf { it > 0L },
                                 urlFocusRequester = settingsUrlFocusRequester,
+                                updateUrlFocusRequester = updateUrlFocusRequester,
+                                updateUiState = updateUiState,
                                 onExternalUrlChange = { settingsExternalUrlDraft = it },
+                                onUpdateUrlChange = { settingsUpdateUrlDraft = it },
                                 onSaveExternalUrl = {
                                     configPreferences.saveExternalUrl(settingsExternalUrlDraft)
+                                    configPreferences.saveUpdateUrl(settingsUpdateUrlDraft)
                                     preferredConfigLocation = configPreferences.resolvePreferredLocation()
                                     reloadNonce += 1
                                     showSettingsPanel = false
@@ -429,6 +510,22 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                                     reloadNonce += 1
                                     showSettingsPanel = false
                                     showChannelList = false
+                                },
+                                onCheckUpdate = {
+                                    configPreferences.saveUpdateUrl(settingsUpdateUrlDraft)
+                                    checkForUpdate(
+                                        scope = coroutineScope,
+                                        updateRepository = updateRepository,
+                                        updateUrl = settingsUpdateUrlDraft,
+                                        onStateChange = { updateUiState = it },
+                                    )
+                                },
+                                onOpenUpdate = {
+                                    val targetUrl =
+                                        updateUiState.downloadUrl
+                                            ?: updateUiState.releasePageUrl
+                                            ?: settingsUpdateUrlDraft
+                                    openExternalUrl(context, targetUrl)
                                 },
                             )
                         } else {
@@ -455,6 +552,48 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                 }
             }
         }
+
+        pendingStartupUpdatePrompt?.let { startupPrompt ->
+            AlertDialog(
+                onDismissRequest = { pendingStartupUpdatePrompt = null },
+                title = { Text(text = "Update available") },
+                text = {
+                    Text(
+                        text =
+                            buildString {
+                                append("Current: ${startupPrompt.currentVersion ?: BuildConfig.VERSION_NAME}")
+                                startupPrompt.latestVersion?.let { latest ->
+                                    append("\nLatest: $latest")
+                                }
+                                startupPrompt.statusMessage?.let { message ->
+                                    append("\n\n$message")
+                                }
+                            },
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val targetUrl =
+                                startupPrompt.downloadUrl
+                                    ?: startupPrompt.releasePageUrl
+                                    ?: configPreferences.getConfiguredUpdateUrl()
+                            openExternalUrl(context, targetUrl)
+                            pendingStartupUpdatePrompt = null
+                        },
+                    ) {
+                        Text("Update now")
+                    }
+                },
+                dismissButton = {
+                    OutlinedButton(
+                        onClick = { pendingStartupUpdatePrompt = null },
+                    ) {
+                        Text("Later")
+                    }
+                },
+            )
+        }
     }
 }
 
@@ -463,11 +602,17 @@ private fun SettingsPanel(
     currentSourceSummary: String,
     warningMessage: String?,
     externalUrl: String,
+    updateUrl: String,
     lastUpdatedAtMillis: Long?,
     urlFocusRequester: FocusRequester,
+    updateUrlFocusRequester: FocusRequester,
+    updateUiState: QtvUpdateUiState,
     onExternalUrlChange: (String) -> Unit,
+    onUpdateUrlChange: (String) -> Unit,
     onSaveExternalUrl: () -> Unit,
     onReloadChannels: () -> Unit,
+    onCheckUpdate: () -> Unit,
+    onOpenUpdate: () -> Unit,
 ) {
     Column(
         modifier = Modifier.focusGroup(),
@@ -518,17 +663,59 @@ private fun SettingsPanel(
                 Text("Save")
             }
         }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "App updates",
+            style = MaterialTheme.typography.titleMedium,
+            color = Color.White,
+            fontWeight = FontWeight.SemiBold,
+        )
+        OutlinedTextField(
+            value = updateUrl,
+            onValueChange = onUpdateUrlChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(updateUrlFocusRequester),
+            label = { Text("Update source URL") },
+            supportingText = { Text("Default uses GitHub latest release API. Direct APK URL is also supported.") },
+            singleLine = true,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Button(
+                onClick = onCheckUpdate,
+            ) {
+                Text(if (updateUiState.isChecking) "Checking..." else "Check update")
+            }
+            OutlinedButton(
+                onClick = onOpenUpdate,
+                enabled = updateUiState.downloadUrl != null || updateUiState.releasePageUrl != null || updateUrl.isNotBlank(),
+            ) {
+                Text("Open update")
+            }
+        }
+        if (updateUiState.statusMessage != null) {
+            Text(
+                text = updateUiState.statusMessage,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (updateUiState.isError) MaterialTheme.colorScheme.error else Color.White.copy(alpha = 0.82f),
+            )
+        }
+        if (updateUiState.latestVersion != null) {
+            Text(
+                text = "Current: ${updateUiState.currentVersion ?: BuildConfig.VERSION_NAME}  |  Latest: ${updateUiState.latestVersion}",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.72f),
+            )
+        }
         Button(
             onClick = onReloadChannels,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Update channel list")
         }
-        Text(
-            text = "Update app: reserved for a later step.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.White.copy(alpha = 0.72f),
-        )
     }
 }
 
@@ -697,6 +884,20 @@ private data class QtvCatalogUiState(
     val errorMessage: String? = null,
 )
 
+private data class QtvUpdateUiState(
+    val isChecking: Boolean = false,
+    val statusMessage: String? = null,
+    val isError: Boolean = false,
+    val currentVersion: String? = null,
+    val latestVersion: String? = null,
+    val downloadUrl: String? = null,
+    val releasePageUrl: String? = null,
+)
+
+private data class RemoteCatalogSyncResult(
+    val catalogChanged: Boolean,
+)
+
 private enum class DrawerFocusArea {
     ChannelList,
     SettingsButton,
@@ -704,6 +905,120 @@ private enum class DrawerFocusArea {
 
 private fun formatLastUpdatedAt(timestampMillis: Long): String =
     SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(timestampMillis))
+
+private suspend fun loadInitialCatalog(
+    context: android.content.Context,
+    configRepository: QtvConfigRepository,
+    configPreferences: QtvConfigPreferences,
+    preferredLocation: QtvConfigLocation,
+): QtvConfigCatalog {
+    val remoteLocation = preferredLocation as? QtvConfigLocation.ExternalUrl
+    if (remoteLocation != null) {
+        configPreferences.getCachedRemoteJson(remoteLocation.url)
+            ?.takeIf { it.isNotBlank() }
+            ?.let { cachedJson ->
+                return configRepository.loadCatalogFromRawJson(cachedJson, remoteLocation)
+            }
+    }
+    return configRepository.loadCatalog(context, preferredLocation)
+}
+
+private suspend fun syncRemoteCatalogIfNeeded(
+    context: android.content.Context,
+    configRepository: QtvConfigRepository,
+    configPreferences: QtvConfigPreferences,
+    remoteLocation: QtvConfigLocation.ExternalUrl,
+): RemoteCatalogSyncResult {
+    val cachedRemoteJson = configPreferences.getCachedRemoteJson(remoteLocation.url)
+    val remoteJson =
+        runCatching {
+            configRepository.fetchRawJson(context, remoteLocation)
+        }.getOrElse {
+            return RemoteCatalogSyncResult(catalogChanged = false)
+        }
+
+    if (remoteJson == cachedRemoteJson) {
+        configPreferences.saveCachedRemoteJson(remoteLocation.url, remoteJson)
+        return RemoteCatalogSyncResult(catalogChanged = false)
+    }
+
+    configRepository.loadCatalogFromRawJson(remoteJson, remoteLocation)
+    configPreferences.saveCachedRemoteJson(remoteLocation.url, remoteJson)
+    configPreferences.saveLastUpdatedAtMillis(System.currentTimeMillis())
+    return RemoteCatalogSyncResult(catalogChanged = true)
+}
+
+private suspend fun fetchStartupUpdateState(
+    updateRepository: QtvUpdateRepository,
+    configPreferences: QtvConfigPreferences,
+): QtvUpdateUiState? {
+    val updateUrl = configPreferences.getConfiguredUpdateUrl()
+    return runCatching {
+        withContext(Dispatchers.IO) {
+            updateRepository.checkForUpdate(updateUrl)
+        }
+    }.getOrNull()
+        ?.takeIf { it.updateAvailable }
+        ?.let { result ->
+            QtvUpdateUiState(
+                isChecking = false,
+                statusMessage = "A newer app version is available.",
+                currentVersion = result.currentVersion,
+                latestVersion = result.latestVersion,
+                downloadUrl = result.downloadUrl,
+                releasePageUrl = result.releasePageUrl,
+            )
+        }
+}
+
+private fun checkForUpdate(
+    scope: CoroutineScope,
+    updateRepository: QtvUpdateRepository,
+    updateUrl: String,
+    onStateChange: (QtvUpdateUiState) -> Unit,
+) {
+    onStateChange(
+        QtvUpdateUiState(
+            isChecking = true,
+            statusMessage = "Checking latest version...",
+        ),
+    )
+    scope.launch {
+        val nextState =
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    updateRepository.checkForUpdate(updateUrl)
+                }
+                QtvUpdateUiState(
+                    isChecking = false,
+                    statusMessage =
+                        if (result.updateAvailable) {
+                            "Update available. Open update to download the latest APK."
+                        } else {
+                            "Already on the latest version."
+                        },
+                    currentVersion = result.currentVersion,
+                    latestVersion = result.latestVersion,
+                    downloadUrl = result.downloadUrl,
+                    releasePageUrl = result.releasePageUrl,
+                )
+            } catch (error: Throwable) {
+                QtvUpdateUiState(
+                    isChecking = false,
+                    statusMessage = error.message ?: "Failed to check updates.",
+                    isError = true,
+                )
+            }
+        onStateChange(nextState)
+    }
+}
+
+private fun openExternalUrl(context: android.content.Context, url: String) {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(intent)
+}
 
 @Preview(widthDp = 1280, heightDp = 720)
 @Composable

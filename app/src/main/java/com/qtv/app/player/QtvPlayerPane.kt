@@ -52,6 +52,7 @@ fun QtvPlayerPane(
     }
     val primarySource = sources.firstOrNull()
     var playbackStatus by remember { mutableStateOf("Loading stream...") }
+    var keepScreenOn by remember { mutableStateOf(false) }
     var lastErrorMessage by remember { mutableStateOf<String?>(null) }
     var lastErrorCategory by remember { mutableStateOf<String?>(null) }
     var retryAttemptCount by remember { mutableIntStateOf(0) }
@@ -73,6 +74,10 @@ fun QtvPlayerPane(
 
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                keepScreenOn = isPlaying
+            }
+
             override fun onPlaybackStateChanged(state: Int) {
                 if (lastErrorMessage != null && state == Player.STATE_IDLE) {
                     return
@@ -98,6 +103,7 @@ fun QtvPlayerPane(
                 lastErrorMessage = classifiedError.detail
                 exoPlayer.stop()
                 exoPlayer.clearMediaItems()
+                keepScreenOn = false
 
                 if (retryAttemptCount < MAX_RETRY_ATTEMPTS) {
                     val nextAttempt = retryAttemptCount + 1
@@ -132,6 +138,7 @@ fun QtvPlayerPane(
             playbackStatus = "No playable source configured"
             exoPlayer.stop()
             exoPlayer.clearMediaItems()
+            keepScreenOn = false
             return@LaunchedEffect
         }
 
@@ -166,12 +173,14 @@ fun QtvPlayerPane(
                     useController = false
                     resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                     setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                    this.keepScreenOn = keepScreenOn
                     player = exoPlayer
                 }
             },
             modifier = Modifier.fillMaxSize(),
             update = { playerView ->
                 playerView.player = exoPlayer
+                playerView.keepScreenOn = keepScreenOn
             },
         )
 

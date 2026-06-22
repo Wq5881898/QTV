@@ -5,6 +5,8 @@ plugins {
 
 val defaultQtvRemoteConfigUrl = "https://raw.githubusercontent.com/Wq5881898/QTV/main/qtv.json"
 val qtvRemoteConfigUrl = providers.gradleProperty("QTV_REMOTE_CONFIG_URL").orElse(defaultQtvRemoteConfigUrl)
+val defaultQtvUpdateUrl = "https://api.github.com/repos/Wq5881898/QTV/releases/latest"
+val qtvUpdateUrl = providers.gradleProperty("QTV_UPDATE_URL").orElse(defaultQtvUpdateUrl)
 
 android {
     namespace = "com.qtv.app"
@@ -18,12 +20,17 @@ android {
         applicationId = "com.qtv.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "0.1.3"
         buildConfigField(
             "String",
             "QTV_REMOTE_CONFIG_URL",
             "\"${qtvRemoteConfigUrl.get().replace("\\", "\\\\").replace("\"", "\\\"")}\"",
+        )
+        buildConfigField(
+            "String",
+            "QTV_UPDATE_URL",
+            "\"${qtvUpdateUrl.get().replace("\\", "\\\\").replace("\"", "\\\"")}\"",
         )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
