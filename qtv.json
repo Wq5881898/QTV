@@ -1,20 +1,7 @@
 {
   "channels": {
     "version": "local-test-1",
-    "items": [
-      {
-        "id": "ELTA1",
-        "name": "ELTA1",
-        "category": "Local qtv.json",
-        "sources": [
-          {
-            "url": "https://live.wxinxi.com/live/86597104_okehlpipbdoz2lujaxkrvv9eylmlbduv.m3u8",
-            "priority": 1,
-            "type": "hls",
-            "label": "Primary"
-          }
-        ]
-      },      
+    "items": [   
       {
         "id": "TNS1",
         "name": "TNS1",
