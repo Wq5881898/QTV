@@ -14,3 +14,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Local channel list override. Note: tracked copies of qtv.json are still managed by git.
+qtv.json
