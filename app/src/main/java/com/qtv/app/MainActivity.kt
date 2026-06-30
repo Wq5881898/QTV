@@ -29,9 +29,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -72,6 +74,10 @@ import com.qtv.app.config.QtvConfigPreferences
 import com.qtv.app.config.QtvConfigRepository
 import com.qtv.app.player.QtvPlayerPane
 import com.qtv.app.ui.theme.QTVTheme
+import com.qtv.app.ui.theme.QtvBlue
+import com.qtv.app.ui.theme.QtvBlueDim
+import com.qtv.app.ui.theme.QtvText
+import com.qtv.app.ui.theme.QtvTextMuted
 import com.qtv.app.updater.QtvUpdateRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -336,6 +342,36 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                         true
                     }
 
+                    showChannelList &&
+                        !showSettingsPanel &&
+                        drawerFocusArea == DrawerFocusArea.ChannelList &&
+                        focusedIndex == 0 &&
+                        event.key == Key.DirectionUp -> {
+                        focusRequesters.getOrNull(focusedIndex)?.requestFocus()
+                        true
+                    }
+
+                    showChannelList &&
+                        !showSettingsPanel &&
+                        drawerFocusArea == DrawerFocusArea.ChannelList &&
+                        focusedIndex == channels.lastIndex &&
+                        event.key == Key.DirectionDown -> {
+                        focusRequesters.getOrNull(focusedIndex)?.requestFocus()
+                        true
+                    }
+
+                    showChannelList &&
+                        !showSettingsPanel &&
+                        drawerFocusArea == DrawerFocusArea.SettingsButton &&
+                        (
+                            event.key == Key.DirectionRight ||
+                                event.key == Key.DirectionUp ||
+                                event.key == Key.DirectionDown
+                        ) -> {
+                        settingsButtonFocusRequester.requestFocus()
+                        true
+                    }
+
                     event.key == Key.Back ||
                         event.nativeKeyEvent.keyCode == AndroidKeyEvent.KEYCODE_BACK -> {
                         if (showChannelList) {
@@ -425,7 +461,7 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                            OutlinedButton(
+                            FocusAwareActionButton(
                                 onClick = { showSettingsPanel = true },
                                 enabled = !showSettingsPanel,
                                 modifier = Modifier
@@ -666,7 +702,7 @@ private fun SettingsPanel(
                 label = { Text("External qtv.json URL") },
                 singleLine = true,
             )
-            Button(
+            FocusAwareActionButton(
                 onClick = onSaveExternalUrl,
                 modifier = Modifier.padding(top = 8.dp),
             ) {
@@ -704,7 +740,7 @@ private fun SettingsPanel(
                 label = { Text("Update app URL") },
                 singleLine = true,
             )
-            Button(
+            FocusAwareActionButton(
                 onClick = onSaveUpdateUrl,
                 modifier = Modifier.padding(top = 8.dp),
             ) {
@@ -715,7 +751,7 @@ private fun SettingsPanel(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            OutlinedButton(
+            FocusAwareActionButton(
                 onClick = onReloadChannels,
                 modifier = Modifier.weight(1.15f),
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
@@ -726,7 +762,7 @@ private fun SettingsPanel(
                     maxLines = 1,
                 )
             }
-            Button(
+            FocusAwareActionButton(
                 onClick = onCheckUpdate,
                 modifier = Modifier.weight(1.15f),
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
@@ -752,6 +788,53 @@ private fun SettingsPanel(
                 color = Color.White.copy(alpha = 0.72f),
             )
         }
+    }
+}
+
+@Composable
+private fun FocusAwareActionButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
+    content: @Composable () -> Unit,
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    val containerColor =
+        when {
+            !enabled -> QtvBlueDim.copy(alpha = 0.35f)
+            isFocused -> QtvBlue
+            else -> Color(0x33F3F6FC)
+        }
+    val contentColor =
+        when {
+            !enabled -> QtvTextMuted.copy(alpha = 0.65f)
+            isFocused -> QtvText
+            else -> QtvText.copy(alpha = 0.92f)
+        }
+    val borderColor =
+        when {
+            !enabled -> QtvBlueDim.copy(alpha = 0.4f)
+            isFocused -> QtvBlue
+            else -> Color(0x66F3F6FC)
+        }
+
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.onFocusChanged { state -> isFocused = state.isFocused },
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, borderColor),
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = containerColor,
+                contentColor = contentColor,
+                disabledContainerColor = containerColor,
+                disabledContentColor = contentColor,
+            ),
+        contentPadding = contentPadding,
+    ) {
+        content()
     }
 }
 

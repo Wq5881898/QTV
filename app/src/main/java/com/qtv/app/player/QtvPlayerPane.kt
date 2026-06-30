@@ -21,8 +21,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
@@ -44,6 +47,7 @@ fun QtvPlayerPane(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val exoPlayer = remember(context) {
         ExoPlayer.Builder(context).build().apply {
             playWhenReady = true
@@ -57,6 +61,7 @@ fun QtvPlayerPane(
     var lastErrorCategory by remember { mutableStateOf<String?>(null) }
     var retryAttemptCount by remember { mutableIntStateOf(0) }
     var pendingRetryAttempt by remember { mutableStateOf<Int?>(null) }
+    var shouldResumePlayback by remember { mutableStateOf(true) }
     val showErrorScreen = lastErrorCategory != null || lastErrorMessage != null
     val loadPrimarySource = {
         exoPlayer.stop()
@@ -70,6 +75,13 @@ fun QtvPlayerPane(
         exoPlayer.prepare()
         exoPlayer.playWhenReady = true
         exoPlayer.play()
+    }
+    val stopPlayback = {
+        pendingRetryAttempt = null
+        exoPlayer.stop()
+        exoPlayer.clearMediaItems()
+        keepScreenOn = false
+        playbackStatus = "Playback stopped"
     }
 
     DisposableEffect(exoPlayer) {
@@ -129,16 +141,45 @@ fun QtvPlayerPane(
         }
     }
 
-    LaunchedEffect(channelName, sources) {
+    DisposableEffect(lifecycleOwner, exoPlayer, primarySource, channelType) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> {
+                    shouldResumePlayback = false
+                    stopPlayback()
+                }
+
+                Lifecycle.Event.ON_START -> {
+                    shouldResumePlayback = true
+                    if (primarySource != null) {
+                        playbackStatus = "Loading stream..."
+                        loadPrimarySource()
+                    }
+                }
+
+                else -> Unit
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    LaunchedEffect(channelName, sources, shouldResumePlayback) {
         lastErrorCategory = null
         lastErrorMessage = null
         retryAttemptCount = 0
         pendingRetryAttempt = null
         if (primarySource == null) {
             playbackStatus = "No playable source configured"
-            exoPlayer.stop()
-            exoPlayer.clearMediaItems()
-            keepScreenOn = false
+            stopPlayback()
+            return@LaunchedEffect
+        }
+
+        if (!shouldResumePlayback) {
+            stopPlayback()
             return@LaunchedEffect
         }
 
@@ -146,15 +187,23 @@ fun QtvPlayerPane(
         loadPrimarySource()
     }
 
-    LaunchedEffect(channelName, sources, pendingRetryAttempt) {
+    LaunchedEffect(channelName, sources, pendingRetryAttempt, shouldResumePlayback) {
         val retryAttempt = pendingRetryAttempt ?: return@LaunchedEffect
         if (primarySource == null) {
+            pendingRetryAttempt = null
+            return@LaunchedEffect
+        }
+        if (!shouldResumePlayback) {
             pendingRetryAttempt = null
             return@LaunchedEffect
         }
 
         if (retryAttempt > 1) {
             delay(RETRY_DELAY_MS)
+        }
+        if (!shouldResumePlayback) {
+            pendingRetryAttempt = null
+            return@LaunchedEffect
         }
         playbackStatus = "Retrying stream... ($retryAttempt/$MAX_RETRY_ATTEMPTS)"
         pendingRetryAttempt = null
