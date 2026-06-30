@@ -149,9 +149,6 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                     preferredLocation = preferredConfigLocation,
                 )
             }
-            val updatedAtMillis = System.currentTimeMillis()
-            configPreferences.saveLastUpdatedAtMillis(updatedAtMillis)
-            lastUpdatedAtMillis = updatedAtMillis
             QtvCatalogUiState(catalog = catalog)
         } catch (error: Throwable) {
             QtvCatalogUiState(
@@ -214,6 +211,7 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
     val drawerTouchInteraction = remember { MutableInteractionSource() }
     var drawerFocusArea by rememberSaveable { mutableStateOf(DrawerFocusArea.ChannelList) }
     var updateUiState by remember { mutableStateOf(QtvUpdateUiState()) }
+    var sourceUpdateUiState by remember { mutableStateOf(QtvSourceUpdateUiState()) }
     var pendingStartupUpdatePrompt by remember { mutableStateOf<QtvUpdateUiState?>(null) }
 
     LaunchedEffect(Unit) {
@@ -257,6 +255,7 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
             settingsExternalUrlDraft = configPreferences.getConfiguredExternalUrl()
             settingsUpdateUrlDraft = configPreferences.getConfiguredUpdateUrl()
             updateUiState = QtvUpdateUiState()
+            sourceUpdateUiState = QtvSourceUpdateUiState()
             settingsUrlFocusRequester.requestFocus()
         }
     }
@@ -278,6 +277,7 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
             }
 
         if (syncResult.catalogChanged) {
+            lastUpdatedAtMillis = configPreferences.getLastUpdatedAtMillis() ?: lastUpdatedAtMillis
             reloadNonce += 1
             return@LaunchedEffect
         }
@@ -535,6 +535,7 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                                 urlFocusRequester = settingsUrlFocusRequester,
                                 updateUrlFocusRequester = updateUrlFocusRequester,
                                 updateUiState = updateUiState,
+                                sourceUpdateUiState = sourceUpdateUiState,
                                 onExternalUrlChange = { settingsExternalUrlDraft = it },
                                 onUpdateUrlChange = { settingsUpdateUrlDraft = it },
                                 onSaveExternalUrl = {
@@ -550,10 +551,56 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                                         configPreferences.getLastAppUpdateCheckAtMillis() ?: lastAppUpdateCheckAtMillis
                                 },
                                 onReloadChannels = {
-                                    preferredConfigLocation = configPreferences.resolvePreferredLocation()
-                                    reloadNonce += 1
-                                    showSettingsPanel = false
-                                    showChannelList = false
+                                    configPreferences.saveExternalUrl(settingsExternalUrlDraft)
+                                    val remoteLocation =
+                                        configPreferences.resolvePreferredLocation() as? QtvConfigLocation.ExternalUrl
+                                    if (remoteLocation == null) {
+                                        sourceUpdateUiState =
+                                            QtvSourceUpdateUiState(
+                                                statusMessage = "No external source URL configured.",
+                                                isError = true,
+                                            )
+                                    } else {
+                                        sourceUpdateUiState =
+                                            QtvSourceUpdateUiState(isLoading = true, statusMessage = "Updating source...")
+                                        coroutineScope.launch {
+                                            val nextState =
+                                                try {
+                                                    val syncResult =
+                                                        withContext(Dispatchers.IO) {
+                                                            forceSyncRemoteCatalog(
+                                                                context = context,
+                                                                configRepository = configRepository,
+                                                                configPreferences = configPreferences,
+                                                                remoteLocation = remoteLocation,
+                                                            )
+                                                        }
+                                                    preferredConfigLocation = remoteLocation
+                                                    if (syncResult.catalogChanged) {
+                                                        lastUpdatedAtMillis =
+                                                            configPreferences.getLastUpdatedAtMillis()
+                                                                ?: lastUpdatedAtMillis
+                                                        reloadNonce += 1
+                                                        QtvSourceUpdateUiState(
+                                                            isLoading = false,
+                                                            statusMessage = "Source updated successfully.",
+                                                        )
+                                                    } else {
+                                                        QtvSourceUpdateUiState(
+                                                            isLoading = false,
+                                                            statusMessage = "Source is already up to date.",
+                                                        )
+                                                    }
+                                                } catch (error: Throwable) {
+                                                    QtvSourceUpdateUiState(
+                                                        isLoading = false,
+                                                        statusMessage = error.message ?: "Failed to update source.",
+                                                        isError = true,
+                                                    )
+                                                }
+                                            sourceUpdateUiState = nextState
+                                        }
+                                    }
                                 },
                                 onCheckUpdate = {
                                     configPreferences.saveUpdateUrl(settingsUpdateUrlDraft)
@@ -647,6 +694,7 @@ private fun SettingsPanel(
     urlFocusRequester: FocusRequester,
     updateUrlFocusRequester: FocusRequester,
     updateUiState: QtvUpdateUiState,
+    sourceUpdateUiState: QtvSourceUpdateUiState,
     onExternalUrlChange: (String) -> Unit,
     onUpdateUrlChange: (String) -> Unit,
     onSaveExternalUrl: () -> Unit,
@@ -753,11 +801,12 @@ private fun SettingsPanel(
         ) {
             FocusAwareActionButton(
                 onClick = onReloadChannels,
+                enabled = !sourceUpdateUiState.isLoading,
                 modifier = Modifier.weight(1.15f),
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
             ) {
                 Text(
-                    text = "Update source",
+                    text = if (sourceUpdateUiState.isLoading) "Updating..." else "Update source",
                     style = MaterialTheme.typography.labelMedium,
                     maxLines = 1,
                 )
@@ -773,6 +822,13 @@ private fun SettingsPanel(
                     maxLines = 1,
                 )
             }
+        }
+        if (sourceUpdateUiState.statusMessage != null) {
+            Text(
+                text = sourceUpdateUiState.statusMessage,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (sourceUpdateUiState.isError) MaterialTheme.colorScheme.error else Color.White.copy(alpha = 0.82f),
+            )
         }
         if (updateUiState.statusMessage != null) {
             Text(
@@ -1013,6 +1069,12 @@ private data class QtvUpdateUiState(
     val releasePageUrl: String? = null,
 )
 
+private data class QtvSourceUpdateUiState(
+    val isLoading: Boolean = false,
+    val statusMessage: String? = null,
+    val isError: Boolean = false,
+)
+
 private data class RemoteCatalogSyncResult(
     val catalogChanged: Boolean,
 )
@@ -1055,6 +1117,26 @@ private suspend fun syncRemoteCatalogIfNeeded(
         }.getOrElse {
             return RemoteCatalogSyncResult(catalogChanged = false)
         }
+
+    if (remoteJson == cachedRemoteJson) {
+        configPreferences.saveCachedRemoteJson(remoteLocation.url, remoteJson)
+        return RemoteCatalogSyncResult(catalogChanged = false)
+    }
+
+    configRepository.loadCatalogFromRawJson(remoteJson, remoteLocation)
+    configPreferences.saveCachedRemoteJson(remoteLocation.url, remoteJson)
+    configPreferences.saveLastUpdatedAtMillis(System.currentTimeMillis())
+    return RemoteCatalogSyncResult(catalogChanged = true)
+}
+
+private suspend fun forceSyncRemoteCatalog(
+    context: android.content.Context,
+    configRepository: QtvConfigRepository,
+    configPreferences: QtvConfigPreferences,
+    remoteLocation: QtvConfigLocation.ExternalUrl,
+): RemoteCatalogSyncResult {
+    val cachedRemoteJson = configPreferences.getCachedRemoteJson(remoteLocation.url)
+    val remoteJson = configRepository.fetchRawJson(context, remoteLocation)
 
     if (remoteJson == cachedRemoteJson) {
         configPreferences.saveCachedRemoteJson(remoteLocation.url, remoteJson)
