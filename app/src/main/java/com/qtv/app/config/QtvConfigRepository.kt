@@ -121,7 +121,7 @@ class QtvConfigRepository(
 private fun QtvConfigLocation.defaultCategory(): String =
     when (this) {
         QtvConfigLocation.BundledDefault -> "Bundled qtv.json"
-        is QtvConfigLocation.ExternalUrl -> "External qtv.json"
+        is QtvConfigLocation.ExternalUrl -> "External source"
     }
 
 private fun QtvConfigLocation.sourceSummary(): String =
@@ -137,7 +137,7 @@ private fun buildFallbackWarning(
     val reason = error.message?.lineSequence()?.firstOrNull()?.trim().orEmpty()
     val sourceName = when (location) {
         QtvConfigLocation.BundledDefault -> "bundled default config"
-        is QtvConfigLocation.ExternalUrl -> "external config URL"
+        is QtvConfigLocation.ExternalUrl -> "external source URL"
     }
     return if (reason.isBlank()) {
         "Failed to load $sourceName. Using bundled default config."

@@ -699,7 +699,7 @@ private fun SettingsPanel(
                     .weight(1f)
                     .heightIn(min = 52.dp)
                     .focusRequester(urlFocusRequester),
-                label = { Text("External qtv.json URL") },
+                label = { Text("External source URL") },
                 singleLine = true,
             )
             FocusAwareActionButton(
