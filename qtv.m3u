@@ -1,72 +1,72 @@
 #EXTM3U
 
-#EXTINF:-1 tvg-id="tsn1" tvg-name="TSN1" group-title="World Cup",TSN1
+#EXTINF:-1 tvg-id="tsn1-1" tvg-name="TSN1" group-title="World Cup",TSN1
 http://line.smootvone.vip:80/play/live.php?mac=00:1B:79:51:17:A1&stream=902070&extension=m3u8
-#EXTINF:-1 tvg-id="tsn1" tvg-name="TSN1" group-title="World Cup",TSN1
+#EXTINF:-1 tvg-id="tsn1-2" tvg-name="TSN1" group-title="World Cup",TSN1
 http://185.243.7.171:80/play/live.php?mac=00:1B:79:41:2C:DF&stream=2077049&extension=m3u8
-#EXTINF:-1 tvg-id="tsn1" tvg-name="TSN1" group-title="World Cup",TSN1
+#EXTINF:-1 tvg-id="tsn1-3" tvg-name="TSN1" group-title="World Cup",TSN1
 http://s.rocketdns.info:8080/live/monstercable/Dq6jjknxCr/3146.ts
 
-#EXTINF:-1 tvg-id="tsn2" tvg-name="TSN2" group-title="World Cup",TSN2
+#EXTINF:-1 tvg-id="tsn2-1" tvg-name="TSN2" group-title="World Cup",TSN2
 http://line.ciao-ott.net:80/play/live.php?mac=00:1B:79:25:19:1F&stream=902071&extension=m3u8
-#EXTINF:-1 tvg-id="tsn2" tvg-name="TSN2" group-title="World Cup",TSN2
+#EXTINF:-1 tvg-id="tsn2-2" tvg-name="TSN2" group-title="World Cup",TSN2
 http://185.243.7.171:80/play/live.php?mac=00:1B:79:41:2C:DF&stream=2077048&extension=m3u8
-#EXTINF:-1 tvg-id="tsn2" tvg-name="TSN2" group-title="World Cup",TSN2
+#EXTINF:-1 tvg-id="tsn2-3" tvg-name="TSN2" group-title="World Cup",TSN2
 http://s.rocketdns.info:8080/live/monstercable/Dq6jjknxCr/3145.ts
 
-#EXTINF:-1 tvg-id="tsn3" tvg-name="TSN3" group-title="World Cup",TSN3
+#EXTINF:-1 tvg-id="tsn3-1" tvg-name="TSN3" group-title="World Cup",TSN3
 http://line.watchtivo-8k.com:80/play/live.php?mac=00:1B:79:1C:70:25&stream=902072&extension=m3u8
-#EXTINF:-1 tvg-id="tsn3" tvg-name="TSN3" group-title="World Cup",TSN3
+#EXTINF:-1 tvg-id="tsn3-2" tvg-name="TSN3" group-title="World Cup",TSN3
 http://185.243.7.171:80/play/live.php?mac=00:1B:79:41:2C:DF&stream=2077047&extension=m3u8
 
-#EXTINF:-1 tvg-id="tsn4" tvg-name="TSN4" group-title="World Cup",TSN4
+#EXTINF:-1 tvg-id="tsn4-1" tvg-name="TSN4" group-title="World Cup",TSN4
 http://185.243.7.171:80/play/live.php?mac=00:1B:79:41:2C:DF&stream=2077046&extension=m3u8
-#EXTINF:-1 tvg-id="tsn4" tvg-name="TSN4" group-title="World Cup",TSN4
+#EXTINF:-1 tvg-id="tsn4-2" tvg-name="TSN4" group-title="World Cup",TSN4
 http://line.watchtivo-8k.com:80/play/live.php?mac=00:1B:79:1C:70:25&stream=902073&extension=m3u8
 
-#EXTINF:-1 tvg-id="tsn5" tvg-name="TSN5" group-title="World Cup",TSN5
+#EXTINF:-1 tvg-id="tsn5-1" tvg-name="TSN5" group-title="World Cup",TSN5
 http://91.208.115.26:80/play/live.php?mac=00:1B:79:53:02:77&stream=902074&extension=m3u8
-#EXTINF:-1 tvg-id="tsn5" tvg-name="TSN5" group-title="World Cup",TSN5
+#EXTINF:-1 tvg-id="tsn5-2" tvg-name="TSN5" group-title="World Cup",TSN5
 http://185.243.7.171:80/play/live.php?mac=00:1B:79:41:2C:DF&stream=2077045&extension=m3u8
 
-#EXTINF:-1 tvg-id="cctv5" tvg-name="CCTV5" group-title="World Cup",CCTV5
+#EXTINF:-1 tvg-id="cctv5-1" tvg-name="CCTV5" group-title="World Cup",CCTV5
 https://cdn16.163189.xyz/163189/cctv5
-#EXTINF:-1 tvg-id="cctv5" tvg-name="CCTV5" group-title="World Cup",CCTV5
+#EXTINF:-1 tvg-id="cctv5-2" tvg-name="CCTV5" group-title="World Cup",CCTV5
 http://43.152.31.17:843/hlslive-tx-cdn.ysp.cctv.cn/ysp/2024078401_dlna.m3u8
-#EXTINF:-1 tvg-id="cctv5" tvg-name="CCTV5" group-title="World Cup",CCTV5
+#EXTINF:-1 tvg-id="cctv5-3" tvg-name="CCTV5" group-title="World Cup",CCTV5
 http://111.43.126.240:9003/hls/5/index.m3u8
-#EXTINF:-1 tvg-id="cctv5" tvg-name="CCTV5" group-title="World Cup",CCTV5
+#EXTINF:-1 tvg-id="cctv5-4" tvg-name="CCTV5" group-title="World Cup",CCTV5
 http://69.30.245.50/live/cctv5.m3u8
-#EXTINF:-1 tvg-id="cctv5" tvg-name="CCTV5" group-title="World Cup",CCTV5
+#EXTINF:-1 tvg-id="cctv5-5" tvg-name="CCTV5" group-title="World Cup",CCTV5
 https://timetv.fyi/http://69.30.245.50/live/cctv5.m3u8
-#EXTINF:-1 tvg-id="cctv5" tvg-name="CCTV5" group-title="World Cup",CCTV5
+#EXTINF:-1 tvg-id="cctv5-6" tvg-name="CCTV5" group-title="World Cup",CCTV5
 https://timetv.fit/http://43.152.31.17:843/hlslive-tx-cdn.ysp.cctv.cn/ysp/2027249301_dlna.m3u8
 
-#EXTINF:-1 tvg-id="other-1" tvg-name="Other 1" group-title="Other",Other 1
+#EXTINF:-1 tvg-id="other-1-1" tvg-name="Other 1" group-title="Other",Other 1
 https://cdn16.163189.xyz/163189/cctv16
-#EXTINF:-1 tvg-id="other-2" tvg-name="Other 2" group-title="Other",Other 2
+#EXTINF:-1 tvg-id="other-2-1" tvg-name="Other 2" group-title="Other",Other 2
 https://cdn16.163189.xyz/163189/gdty
-#EXTINF:-1 tvg-id="other-3" tvg-name="Other 3" group-title="Other",Other 3
+#EXTINF:-1 tvg-id="other-3-1" tvg-name="Other 3" group-title="Other",Other 3
 https://cdn16.163189.xyz/163189/wxty
-#EXTINF:-1 tvg-id="other-4" tvg-name="Other 4" group-title="Other",Other 4
+#EXTINF:-1 tvg-id="other-4-1" tvg-name="Other 4" group-title="Other",Other 4
 https://cdn16.163189.xyz/163189/amty
-#EXTINF:-1 tvg-id="other-5" tvg-name="Other 5" group-title="Other",Other 5
+#EXTINF:-1 tvg-id="other-5-1" tvg-name="Other 5" group-title="Other",Other 5
 https://cdn16.163189.xyz/163189/ch5
-#EXTINF:-1 tvg-id="other-6" tvg-name="Other 6" group-title="Other",Other 6
+#EXTINF:-1 tvg-id="other-6-1" tvg-name="Other 6" group-title="Other",Other 6
 https://cdn16.163189.xyz/163189/ch8
-#EXTINF:-1 tvg-id="other-7" tvg-name="Other 7" group-title="Other",Other 7
+#EXTINF:-1 tvg-id="other-7-1" tvg-name="Other 7" group-title="Other",Other 7
 https://php.jdshipin.com/TVOD/iptv.php?id=viutv
-#EXTINF:-1 tvg-id="other-8" tvg-name="Other 8" group-title="Other",Other 8
+#EXTINF:-1 tvg-id="other-8-1" tvg-name="Other 8" group-title="Other",Other 8
 https://tv.timetv.uk/push.cdn1.hls123.de:8080/streams/5lthhpr4cx3/index.m3u8
-#EXTINF:-1 tvg-id="other-9" tvg-name="Other 9" group-title="Other",Other 9
+#EXTINF:-1 tvg-id="other-9-1" tvg-name="Other 9" group-title="Other",Other 9
 https://rtve01p.origin.c21livecloud.com/live-origin/la1hd-hls/bitrate_1.m3u8
-#EXTINF:-1 tvg-id="other-10" tvg-name="Other 10" group-title="Other",Other 10
+#EXTINF:-1 tvg-id="other-10-1" tvg-name="Other 10" group-title="Other",Other 10
 https://tv.timetv.uk/151.80.18.177.nip.io:86/M6_HD/tracks-v1a1/mono.m3u8
 
-#EXTINF:-1 tvg-id="fox" tvg-name="FOX" group-title="Sports",FOX
+#EXTINF:-1 tvg-id="fox-1" tvg-name="FOX" group-title="Sports",FOX
 http://stream.cammonitorplus.net/1795/index.m3u8
-#EXTINF:-1 tvg-id="fox" tvg-name="FOX" group-title="Sports",FOX
+#EXTINF:-1 tvg-id="fox-2" tvg-name="FOX" group-title="Sports",FOX
 https://apollo-eks.production-public.tubi.io/live/fox-sports-on-tubi-5FPHpS/1280x720.m3u8?ap.debug=0&ap.pt=0&ap.sid=55557d59-f8ed-4c44-8d68-5ec5d95b3132&ap.skip_fallback=0&ap.c=default_cohort&ap.ss=5db25838f132bbcb8412f2ad31115acb
 
-#EXTINF:-1 tvg-id="esport" tvg-name="Esport" group-title="Sports",Esport
+#EXTINF:-1 tvg-id="esport-1" tvg-name="Esport" group-title="Sports",Esport
 http://190.108.83.69:8000/play/a05w/index.m3u8
