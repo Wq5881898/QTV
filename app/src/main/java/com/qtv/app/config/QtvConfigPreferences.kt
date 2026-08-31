@@ -11,14 +11,14 @@ private const val KEY_LAST_APP_UPDATE_CHECK_AT = "last_app_update_check_at"
 private const val KEY_CACHED_REMOTE_JSON = "cached_remote_json"
 private const val KEY_CACHED_REMOTE_URL = "cached_remote_url"
 private const val KEY_LAST_REMOTE_SYNC_AT = "last_remote_sync_at"
-private const val LEGACY_DEFAULT_EXTERNAL_URL = "https://raw.githubusercontent.com/Wq5881898/QTV/main/qtv.json"
+private const val PREVIOUS_DEFAULT_EXTERNAL_URL = "https://raw.githubusercontent.com/Wq5881898/QTV/main/qtv.m3u"
 
 class QtvConfigPreferences(context: Context) {
     private val appContext = context.applicationContext
     private val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     init {
-        migrateLegacyDefaultExternalUrl()
+        migratePreviousDefaultExternalUrl()
     }
 
     fun getSavedExternalUrl(): String? =
@@ -120,9 +120,9 @@ class QtvConfigPreferences(context: Context) {
             ?.let(QtvConfigLocation::ExternalUrl)
             ?: QtvConfigLocation.BundledDefault
 
-    private fun migrateLegacyDefaultExternalUrl() {
+    private fun migratePreviousDefaultExternalUrl() {
         val savedUrl = prefs.getString(KEY_EXTERNAL_URL, null)?.trim().orEmpty()
-        if (savedUrl != LEGACY_DEFAULT_EXTERNAL_URL) {
+        if (savedUrl != PREVIOUS_DEFAULT_EXTERNAL_URL) {
             return
         }
 

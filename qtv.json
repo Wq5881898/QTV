@@ -179,6 +179,11 @@
       "type": 3,
       "api": "csp_huangguo",
       "ext": "https://raw.githubusercontent.com/Yswag/xptv-extensions/main/js/huangguo.js"
+    },
+    {
+      "name": "TVBox点播·暴风资源",
+      "type": 1,
+      "api": "https://bfzyapi.com/api.php/provide/vod/"
     }
   ]
 }

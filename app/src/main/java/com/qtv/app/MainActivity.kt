@@ -266,7 +266,7 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
             return@LaunchedEffect
         }
 
-        val syncResult =
+        val syncResult = runCatching {
             withContext(Dispatchers.IO) {
                 syncRemoteCatalogIfNeeded(
                     context = context,
@@ -275,6 +275,10 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                     remoteLocation = remoteLocation,
                 )
             }
+        }.getOrElse {
+            // A malformed or temporarily unavailable cloud catalog must not terminate playback.
+            return@LaunchedEffect
+        }
 
         if (syncResult.catalogChanged) {
             lastUpdatedAtMillis = configPreferences.getLastUpdatedAtMillis() ?: lastUpdatedAtMillis
@@ -395,6 +399,11 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
             channelName = selectedChannel.name,
             sources = selectedChannel.sources,
             channelType = selectedChannel.sourceType,
+            onRequestChannelList = {
+                if (!showChannelList) {
+                    showChannelList = true
+                }
+            },
             modifier = Modifier
                 .fillMaxSize()
                 .clickable(
@@ -456,7 +465,7 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Channels",
+                                        text = "内容",
                                     style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -500,6 +509,15 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                                         drawerFocusArea = DrawerFocusArea.ChannelList
                                     },
                                     onSelected = {
+                                        channel.vodSite?.let { site ->
+                                            context.startActivity(
+                                                Intent(context, VodBrowserActivity::class.java)
+                                                    .putExtra(VodBrowserActivity.EXTRA_NAME, site.name)
+                                                    .putExtra(VodBrowserActivity.EXTRA_API, site.api)
+                                                    .putExtra(VodBrowserActivity.EXTRA_EXTENSION, site.extensionUrl),
+                                            )
+                                            return@ChannelRow
+                                        }
                                         selectedIndex = index
                                         focusedIndex = index
                                         selectedChannelId = channel.id
@@ -648,9 +666,9 @@ private fun TvHomeScreen(modifier: Modifier = Modifier) {
                     Text(
                         text =
                             buildString {
-                                append("Current: ${startupPrompt.currentVersion ?: BuildConfig.VERSION_NAME}")
+                                append("Current: ${formatDisplayVersion(startupPrompt.currentVersion ?: BuildConfig.VERSION_NAME)}")
                                 startupPrompt.latestVersion?.let { latest ->
-                                    append("\nLatest: $latest")
+                                    append("\nLatest: ${formatDisplayVersion(latest)}")
                                 }
                                 startupPrompt.statusMessage?.let { message ->
                                     append("\n\n$message")
@@ -839,7 +857,9 @@ private fun SettingsPanel(
         }
         if (updateUiState.latestVersion != null) {
             Text(
-                text = "Current: ${updateUiState.currentVersion ?: BuildConfig.VERSION_NAME}  |  Latest: ${updateUiState.latestVersion}",
+                text =
+                    "Current: ${formatDisplayVersion(updateUiState.currentVersion ?: BuildConfig.VERSION_NAME)}  |  " +
+                        "Latest: ${formatDisplayVersion(updateUiState.latestVersion)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(alpha = 0.72f),
             )
@@ -955,6 +975,11 @@ private fun ChannelRow(
                 style = MaterialTheme.typography.titleSmall,
                 color = titleColor,
                 fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = channel.category,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -1086,6 +1111,9 @@ private enum class DrawerFocusArea {
 
 private fun formatLastUpdatedAt(timestampMillis: Long): String =
     SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(timestampMillis))
+
+private fun formatDisplayVersion(version: String): String =
+    version.takeIf { it.startsWith("v", ignoreCase = true) } ?: "v$version"
 
 private suspend fun loadInitialCatalog(
     context: android.content.Context,

@@ -9,6 +9,7 @@ data class QtvSource(
     val priority: Int,
     val type: String,
     val label: String,
+    val headers: Map<String, String> = emptyMap(),
 )
 
 data class QtvChannel(
@@ -18,6 +19,7 @@ data class QtvChannel(
     val status: String,
     val sourceType: String,
     val sources: List<QtvSource>,
+    val vodSite: XptvVodSite? = null,
 )
 
 internal fun parseQtvChannels(rawJson: String, fallbackCategory: String): List<QtvChannel> {
@@ -31,11 +33,10 @@ internal fun parseQtvChannels(rawJson: String, fallbackCategory: String): List<Q
 
 private fun parseJsonChannels(rawJson: String, fallbackCategory: String): List<QtvChannel> {
     val root = JSONObject(rawJson)
-    val items = root
-        .getJSONObject("channels")
-        .getJSONArray("items")
+    val items = root.optJSONObject("channels")?.optJSONArray("items")
+    val directChannels = buildList {
+        if (items == null) return@buildList
 
-    return buildList(items.length()) {
         for (index in 0 until items.length()) {
             val item = items.getJSONObject(index)
             val parsedSources = item.optJSONArray("sources")
@@ -57,6 +58,17 @@ private fun parseJsonChannels(rawJson: String, fallbackCategory: String): List<Q
                 ),
             )
         }
+    }
+    return directChannels + parseXptvVodSites(root).mapIndexed { index, site ->
+        QtvChannel(
+            id = "xptv-${site.api}-${index}",
+            name = site.name,
+            category = "点播",
+            status = "点播",
+            sourceType = "vod",
+            sources = emptyList(),
+            vodSite = site,
+        )
     }
 }
 
@@ -185,6 +197,11 @@ private fun parseSources(sources: JSONArray): List<QtvSource> =
                 priority = source.optInt("priority", Int.MAX_VALUE),
                 type = source.optString("type", "hls").lowercase(),
                 label = source.optString("label", "Source ${index + 1}"),
+                headers = source.optJSONObject("headers")
+                    ?.let { headers ->
+                        headers.keys().asSequence().associateWith { key -> headers.optString(key) }
+                    }
+                    .orEmpty(),
             )
         }
         .sortedBy { source -> source.priority }

@@ -68,5 +68,12 @@
         ]
       }
     ]
-  }
+  },
+  "sites": [
+    {
+      "name": "TVBox点播·暴风资源",
+      "type": 1,
+      "api": "https://bfzyapi.com/api.php/provide/vod/"
+    }
+  ]
 }

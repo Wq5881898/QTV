@@ -1,5 +1,6 @@
 package com.qtv.app.player
 
+import android.view.KeyEvent
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -31,6 +32,8 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.qtv.app.config.QtvSource
@@ -44,17 +47,24 @@ fun QtvPlayerPane(
     channelName: String,
     sources: List<QtvSource>,
     channelType: String,
+    headers: Map<String, String> = emptyMap(),
+    onRequestChannelList: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val exoPlayer = remember(context) {
-        ExoPlayer.Builder(context).build().apply {
+    val primarySource = sources.firstOrNull()
+    val requestHeaders = primarySource?.headers.orEmpty() + headers
+    val exoPlayer = remember(context, requestHeaders) {
+        val dataSourceFactory = DefaultHttpDataSource.Factory()
+            .setDefaultRequestProperties(requestHeaders)
+        ExoPlayer.Builder(context)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
+            .build().apply {
             playWhenReady = true
             repeatMode = Player.REPEAT_MODE_ALL
         }
     }
-    val primarySource = sources.firstOrNull()
     var playbackStatus by remember { mutableStateOf("Loading stream...") }
     var keepScreenOn by remember { mutableStateOf(false) }
     var lastErrorMessage by remember { mutableStateOf<String?>(null) }
@@ -222,6 +232,22 @@ fun QtvPlayerPane(
                     useController = false
                     resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                     setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                    setOnKeyListener { _, keyCode, event ->
+                        if (
+                            event.action == KeyEvent.ACTION_UP &&
+                            keyCode in setOf(
+                                KeyEvent.KEYCODE_DPAD_CENTER,
+                                KeyEvent.KEYCODE_ENTER,
+                                KeyEvent.KEYCODE_NUMPAD_ENTER,
+                            )
+                        ) {
+                            onRequestChannelList()
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    setOnClickListener { onRequestChannelList() }
                     this.keepScreenOn = keepScreenOn
                     player = exoPlayer
                 }

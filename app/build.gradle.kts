@@ -3,7 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val defaultQtvRemoteConfigUrl = "https://raw.githubusercontent.com/Wq5881898/QTV/main/qtv.m3u"
+// qtv.json is the cloud catalog: it can contain both live channels and on-demand sites.
+val defaultQtvRemoteConfigUrl = "https://raw.githubusercontent.com/Wq5881898/QTV/main/qtv.json"
 val qtvRemoteConfigUrl = providers.gradleProperty("QTV_REMOTE_CONFIG_URL").orElse(defaultQtvRemoteConfigUrl)
 val defaultQtvUpdateUrl = "https://api.github.com/repos/Wq5881898/QTV/releases/latest"
 val qtvUpdateUrl = providers.gradleProperty("QTV_UPDATE_URL").orElse(defaultQtvUpdateUrl)
