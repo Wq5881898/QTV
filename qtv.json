@@ -1,7 +1,7 @@
 {
   "channels": {
     "version": "local-test-1",
-    "items": [   
+    "items": [
       {
         "id": "TNS1",
         "name": "TNS1",
@@ -105,7 +105,7 @@
             "label": "Primary"
           }
         ]
-      }, 
+      },
       {
         "id": "CCTV5-4",
         "name": "CCTV5-4",
@@ -118,7 +118,7 @@
             "label": "Primary"
           }
         ]
-      },       
+      },
       {
         "id": "test-902075",
         "name": "VTV-10",
@@ -157,7 +157,7 @@
             "label": "Primary"
           }
         ]
-      }, 
+      },
       {
         "id": "test-902078",
         "name": "TVRI-SPORT",
@@ -173,12 +173,12 @@
       }
     ]
   },
- "sites": [
-  {
-    "name": "hgdj",
-    "type": 3,
-    "api": "csp_huangguo",
-    "ext": "https://raw.githubusercontent.com/Yswag/xptv-extensions/main/js/huangguo.js"
-  }
- ] 
+  "sites": [
+    {
+      "name": "hgdj",
+      "type": 3,
+      "api": "csp_huangguo",
+      "ext": "https://raw.githubusercontent.com/Yswag/xptv-extensions/main/js/huangguo.js"
+    }
+  ]
 }
