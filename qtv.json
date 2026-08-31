@@ -173,4 +173,12 @@
       }
     ]
   }
+ "sites": [
+  {
+    "name": "hgdj",
+    "type": 3,
+    "api": "csp_huangguo",
+    "ext": "https://raw.githubusercontent.com/Yswag/xptv-extensions/main/js/huangguo.js"
+  }
+ ] 
 }
