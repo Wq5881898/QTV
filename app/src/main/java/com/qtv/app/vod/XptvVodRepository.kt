@@ -4,7 +4,9 @@ import com.qtv.app.config.XptvVodSite
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URI
+import java.net.URLEncoder
 import java.net.URL
+import java.nio.charset.StandardCharsets
 import org.json.JSONObject
 
 data class VodTab(val name: String, val id: String)
@@ -16,6 +18,7 @@ interface XptvVodResolver {
     val api: String
     suspend fun tabs(): List<VodTab>
     suspend fun cards(tab: VodTab, page: Int = 1): List<VodCard>
+    suspend fun search(query: String, page: Int = 1): List<VodCard> = emptyList()
     suspend fun tracks(card: VodCard): List<VodTrack>
     suspend fun resolve(track: VodTrack): ResolvedVodStream
 }
@@ -58,8 +61,17 @@ private class TvBoxCmsResolver(api: String) : XptvVodResolver {
     }
 
     override suspend fun cards(tab: VodTab, page: Int): List<VodCard> {
-        val list = fetchJson(endpoint("ac=detail&t=${tab.id}&pg=$page")).optJSONArray("list")
-            ?: return emptyList()
+        return parseCards(fetchJson(endpoint("ac=detail&t=${tab.id}&pg=$page")))
+    }
+
+    override suspend fun search(query: String, page: Int): List<VodCard> {
+        val encoded = URLEncoder.encode(query.trim(), StandardCharsets.UTF_8.name())
+        if (encoded.isBlank()) return emptyList()
+        return parseCards(fetchJson(endpoint("ac=detail&wd=$encoded&pg=$page")))
+    }
+
+    private fun parseCards(response: JSONObject): List<VodCard> {
+        val list = response.optJSONArray("list") ?: return emptyList()
         return buildList {
             for (index in 0 until list.length()) {
                 val item = list.optJSONObject(index) ?: continue
